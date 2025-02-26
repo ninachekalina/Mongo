@@ -17,7 +17,7 @@ jobs:
         ports:
           - 27017:27017
         options: >-
-          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-cmd "mongosh --host localhost --eval 'db.runCommand({ ping: 1 })'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -33,23 +33,27 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mongodb-mongosh
 
-      - name: Check MongoDB shell
+      - name: Check MongoDB shell version
         run: mongosh --version
+
+      - name: List running containers
+        run: docker ps -a
 
       - name: Wait for MongoDB to be ready
         run: |
           echo "Waiting for MongoDB service..."
-          sleep 20
-          for i in {1..30}; do
-            if mongosh --host mongo --eval "db.runCommand({ ping: 1 })" > /dev/null 2>&1; then
+          sleep 10  # Уменьшил с 20 до 10 секунд
+          for i in {1..15}; do  # Уменьшил количество проверок с 30 до 15
+            if mongosh "mongodb://mongo:27017/admin" --eval "db.runCommand({ ping: 1 })" > /dev/null 2>&1; then
               echo "MongoDB is ready!"
               exit 0
             fi
-            echo "Waiting for MongoDB to start ($i/30)..."
-            sleep 3
+            echo "Waiting for MongoDB to start ($i/15)..."
+            sleep 2  # Уменьшил интервал с 3 до 2 секунд
           done
           echo "MongoDB did not start in time."
           exit 1
+
 
       - name: Run MongoDB script
         run: mongosh "mongodb://mongo:27017/testdb" --file test_queries.js
@@ -57,6 +61,3 @@ jobs:
       - name: Show MongoDB logs on failure
         if: failure()
         run: docker logs $(docker ps -q --filter ancestor=mongo:6)
-
-      - name: List running containers
-        run: docker ps -a
