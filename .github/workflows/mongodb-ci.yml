@@ -38,26 +38,25 @@ jobs:
 
       - name: List running containers
         run: docker ps -a
-
       - name: Wait for MongoDB to be ready
         run: |
           echo "Waiting for MongoDB service..."
-          sleep 10  # Уменьшил с 20 до 10 секунд
-          for i in {1..15}; do  # Уменьшил количество проверок с 30 до 15
-            if mongosh "mongodb://mongo:27017/admin" --eval "db.runCommand({ ping: 1 })" > /dev/null 2>&1; then
+          sleep 5  # Уменьшил время начального ожидания
+          for i in {1..15}; do  # Уменьшил число итераций ожидания
+            if mongosh "mongodb://localhost:27017/admin" --eval "db.runCommand({ ping: 1 })" > /dev/null 2>&1; then
               echo "MongoDB is ready!"
               exit 0
             fi
             echo "Waiting for MongoDB to start ($i/15)..."
-            sleep 2  # Уменьшил интервал с 3 до 2 секунд
+            sleep 2
           done
           echo "MongoDB did not start in time."
           exit 1
+
+      
 
 
       - name: Run MongoDB script
         run: mongosh "mongodb://mongo:27017/testdb" --file test_queries.js
 
-      - name: Show MongoDB logs on failure
-        if: failure()
-        run: docker logs $(docker ps -q --filter ancestor=mongo:6)
+      
