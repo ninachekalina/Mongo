@@ -26,14 +26,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install MongoDB Shell (mongosh)
+        run: |
+          curl -fsSL https://www.mongodb.org/static/pgp/server-6.0.asc | sudo gpg --dearmor -o /usr/share/keyrings/mongodb-server-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/mongodb-server-keyring.gpg] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+          sudo apt-get update
+          sudo apt-get install -y mongodb-mongosh
+
       - name: Check MongoDB shell
         run: mongosh --version
-      - name: List running containers
-        run: docker ps -a
+
       - name: Wait for MongoDB to be ready
         run: |
           echo "Waiting for MongoDB service..."
-          sleep 20  # Увеличиваем время ожидания перед началом проверок
+          sleep 20
           for i in {1..30}; do
             if mongosh --host mongo --eval "db.runCommand({ ping: 1 })" > /dev/null 2>&1; then
               echo "MongoDB is ready!"
@@ -44,12 +50,13 @@ jobs:
           done
           echo "MongoDB did not start in time."
           exit 1
+
+      - name: Run MongoDB script
+        run: mongosh "mongodb://mongo:27017/testdb" --file test_queries.js
+
       - name: Show MongoDB logs on failure
         if: failure()
         run: docker logs $(docker ps -q --filter ancestor=mongo:6)
 
-      
-      - name: Run MongoDB script
-        run: mongosh "mongodb://mongo:27017/testdb" --file test_queries.js
-
-     
+      - name: List running containers
+        run: docker ps -a
