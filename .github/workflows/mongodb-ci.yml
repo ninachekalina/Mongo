@@ -57,6 +57,6 @@ jobs:
 
 
       - name: Run MongoDB script
-        run: mongosh "mongodb://mongo:27017/testdb" --file test_queries.js
+        run: mongosh "mongodb://localhost:27017/testdb" --file test_queries.js
 
       
