@@ -1,0 +1,24 @@
+name: MongoDB Test
+
+on: [pull_request]
+
+jobs:
+  test-mongodb:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:6
+        ports:
+          - 27017:27017
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install MongoDB client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mongodb-clients
+
+      - name: Run MongoDB script
+        run: |
+          mongosh mongodb://localhost:27017/testdb < test_queries.js
