@@ -1,6 +1,12 @@
-name: MongoDB CI Test
+name: MongoDB CI
 
-on: [pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   test-mongodb:
@@ -10,35 +16,40 @@ jobs:
         image: mongo:6
         ports:
           - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Debug MongoDB connection
-        run: |
-          docker network ls
-          docker ps -a
-          docker inspect mongo
-          nc -zv mongo 27017 || true
       - name: Check MongoDB shell
         run: mongosh --version
-
+      - name: List running containers
+        run: docker ps -a
       - name: Wait for MongoDB to be ready
         run: |
           echo "Waiting for MongoDB service..."
-          sleep 10
+          sleep 20  # Увеличиваем время ожидания перед началом проверок
           for i in {1..30}; do
             if mongosh --host mongo --eval "db.runCommand({ ping: 1 })" > /dev/null 2>&1; then
               echo "MongoDB is ready!"
               exit 0
             fi
             echo "Waiting for MongoDB to start ($i/30)..."
-            sleep 2
+            sleep 3
           done
           echo "MongoDB did not start in time."
           exit 1
+      - name: Show MongoDB logs on failure
+        if: failure()
+        run: docker logs $(docker ps -q --filter ancestor=mongo:6)
 
-
+      
       - name: Run MongoDB script
         run: mongosh "mongodb://mongo:27017/testdb" --file test_queries.js
 
+     
