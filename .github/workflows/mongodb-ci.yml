@@ -14,6 +14,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Debug MongoDB connection
+        run: |
+          docker network ls
+          docker ps -a
+          docker inspect mongo
+          nc -zv mongo 27017 || true
+      - name: Check MongoDB shell
+        run: mongosh --version
+
       - name: Wait for MongoDB to be ready
         run: |
           echo "Waiting for MongoDB service..."
@@ -28,16 +37,8 @@ jobs:
           done
           echo "MongoDB did not start in time."
           exit 1
-      - name: Check MongoDB shell
-        run: mongosh --version
-
-      - name: Debug MongoDB connection
-        run: |
-          docker network ls
-          docker ps -a
-          docker inspect mongo
-          nc -zv mongo 27017 || true
 
 
       - name: Run MongoDB script
-        run: mongosh mongodb://localhost:27017/testdb < test_queries.js
+        run: mongosh "mongodb://mongo:27017/testdb" --file test_queries.js
+
