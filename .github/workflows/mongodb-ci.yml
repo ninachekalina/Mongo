@@ -1,4 +1,4 @@
-name: MongoDB Test
+name: MongoDB CI Test
 
 on: [pull_request]
 
@@ -14,11 +14,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install MongoDB client
+      - name: Install MongoDB shell
         run: |
           sudo apt-get update
-          sudo apt-get install -y mongodb-clients
+          sudo apt-get install -y gnupg curl
+          curl -fsSL https://pgp.mongodb.com/server-6.0.asc | sudo gpg --dearmor -o /usr/share/keyrings/mongodb-server-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/mongodb-server-keyring.gpg] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+          sudo apt-get update
+          sudo apt-get install -y mongodb-org-shell
 
       - name: Run MongoDB script
-        run: |
-          mongosh mongodb://localhost:27017/testdb < test_queries.js
+        run: mongosh mongodb://localhost:27017/testdb < test_queries.js
