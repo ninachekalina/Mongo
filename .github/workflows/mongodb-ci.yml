@@ -60,9 +60,10 @@ jobs:
       - name: Run MongoDB script
         run: mongosh "mongodb://localhost:27017/testdb" --file test_queries.js
       - name: Upload MongoDB results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: mongo-output
           path: /tmp/mongo_output.json
+
 
       
