@@ -37,6 +37,4 @@ results.push({
 });
 
 // Запись результатов в JSON-файл
-const outputPath = "mongo-output.json"; // Записываем в корневую папку
-fs.writeFileSync(outputPath, JSON.stringify(results, null, 2));
-print("✅ Результаты сохранены в " + outputPath);
+fs.writeFileSync("/tmp/mongo_output.json", JSON.stringify(results, null, 2));
