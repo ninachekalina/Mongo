@@ -63,7 +63,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mongo-output
-          path: mongo-output.txt
+          path:  mongo-output.json
           if-no-files-found: error
 
 
