@@ -1,5 +1,8 @@
-// Подключение к базе
+// Подключение к базе 
 const db = connect("mongodb://localhost:27017/testdb");
+const fs = require('fs');
+
+const results = [];
 
 // Создание коллекции "users", если её нет
 if (!db.getCollectionNames().includes("users")) {
@@ -8,10 +11,10 @@ if (!db.getCollectionNames().includes("users")) {
 }
 
 // Проверка наличия коллекции "users"
-printjson(db.getCollection("users").findOne());
+results.push({ users: db.getCollection("users").findOne() });
 
 // Проверка индексов в "users"
-printjson(db.getCollection("users").getIndexes());
+results.push({ indexes: db.getCollection("users").getIndexes() });
 
 // Создание коллекции "orders", если её нет
 if (!db.getCollectionNames().includes("orders")) {
@@ -26,7 +29,12 @@ db.getCollection("orders").insertOne({
 });
 
 // Проверка выборки данных из "orders"
-printjson(db.getCollection("orders").aggregate([
-    { $match: { status: "pending" } },
-    { $group: { _id: "$status", total: { $sum: "$amount" } } }
-]).toArray());
+results.push({
+    orders: db.getCollection("orders").aggregate([
+        { $match: { status: "pending" } },
+        { $group: { _id: "$status", total: { $sum: "$amount" } } }
+    ]).toArray()
+});
+
+// Запись результатов в JSON-файл
+fs.writeFileSync("/tmp/mongo_output.json", JSON.stringify(results, null, 2));
