@@ -56,6 +56,7 @@ jobs:
             sleep 2
           done
           echo "Neo4j did not start in time."
+          docker logs neo4j
           exit 1
 
       - name: Run Neo4j script
