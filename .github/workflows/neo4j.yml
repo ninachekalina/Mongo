@@ -4,10 +4,17 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '.github/workflows/neo4j.yml'
+      - 'test_queries_neo4j.cql'  # Если изменяется файл с Neo4j-запросами
   pull_request:
     branches:
       - main
+    paths:
+      - '.github/workflows/neo4j.yml'
+      - 'test_queries_neo4j.cql'
   workflow_dispatch:
+
 
 jobs:
   test-neo4j:
