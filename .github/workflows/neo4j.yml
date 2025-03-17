@@ -37,9 +37,10 @@ jobs:
 
       - name: Install Cypher Shell
         run: |
-          wget -qO - https://dist.neo4j.org/cypher-shell/cypher-shell-5.10.0.tar.gz | tar xz
-          sudo mv cypher-shell-5.10.0 /usr/local/bin/cypher-shell
-          sudo chmod +x /usr/local/bin/cypher-shell
+          wget -O cypher-shell.deb https://github.com/neo4j/cypher-shell/releases/download/1.1.15/cypher-shell_1.1.15_all.deb
+          sudo dpkg -i cypher-shell.deb
+          rm cypher-shell.deb
+
 
 
 
