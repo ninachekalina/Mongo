@@ -4,10 +4,17 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '.github/workflows/mongo.yml'
+      - 'test_queries.js'  # Если изменяется файл с Mongo-запросами
   pull_request:
     branches:
       - main
-  workflow_dispatch:  # ✅ Позволяет запускать workflow через API
+    paths:
+      - '.github/workflows/mongo.yml'
+      - 'test_queries.js'
+  workflow_dispatch:
+
 
 jobs:
   test-mongodb:
