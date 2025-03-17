@@ -14,13 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     services:
       neo4j:
-        image: neo4j:5
+        image: neo4j:5.10
         ports:
           - 7474:7474
           - 7687:7687
         env:
           NEO4J_AUTH: neo4j/test  # Логин/пароль для авторизации в базе
         options: >-
+          --env NEO4J_AUTH=neo4j/test
+          --env NEO4J_dbms_memory_pagecache_size=512M
+          --env NEO4J_dbms_memory_heap_initial__size=512M
+          --env NEO4J_dbms_memory_heap_max__size=1G
+          --env NEO4J_dbms_directories_data=/data
           --health-cmd "cypher-shell -u neo4j -p test 'RETURN 1'"
           --health-interval 10s
           --health-timeout 5s
@@ -58,6 +63,9 @@ jobs:
           echo "Neo4j did not start in time."
           docker logs neo4j
           exit 1
+
+      - name: Debug Neo4j Logs
+        run: docker logs $(docker ps -q --filter "name=neo4j")
 
       - name: Run Neo4j script
         run: cypher-shell -u neo4j -p test -f test_queries_neo4j.cql
