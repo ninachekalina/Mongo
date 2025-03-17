@@ -37,10 +37,11 @@ jobs:
 
       - name: Install Neo4j CLI
         run: |
-          wget -O cypher-shell.tar.gz https://dist.neo4j.org/cypher-shell/cypher-shell-5.9.0-unix.tar.gz
-          tar -xzf cypher-shell.tar.gz
-          chmod +x cypher-shell
-          mv cypher-shell /usr/local/bin/cypher-shell
+          curl -fsSL https://debian.neo4j.com/neotechnology.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/neo4j.gpg
+          echo "deb [signed-by=/usr/share/keyrings/neo4j.gpg] https://debian.neo4j.com stable main" | sudo tee /etc/apt/sources.list.d/neo4j.list
+          sudo apt-get update
+          sudo apt-get install -y cypher-shell
+
       
       - name: Check Neo4j CLI version
         run: cypher-shell --version
