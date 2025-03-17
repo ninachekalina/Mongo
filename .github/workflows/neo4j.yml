@@ -1,0 +1,68 @@
+name: Neo4j CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test-neo4j:
+    runs-on: ubuntu-latest
+    services:
+      neo4j:
+        image: neo4j:5
+        ports:
+          - 7474:7474
+          - 7687:7687
+        env:
+          NEO4J_AUTH: neo4j/test  # Логин/пароль для авторизации в базе
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p test 'RETURN 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Neo4j CLI
+        run: |
+          wget -O cypher-shell.tar.gz https://dist.neo4j.org/cypher-shell/cypher-shell-5.9.0-unix.tar.gz
+          tar -xzf cypher-shell.tar.gz
+          chmod +x cypher-shell
+          mv cypher-shell /usr/local/bin/cypher-shell
+
+      - name: Check Neo4j CLI version
+        run: cypher-shell --version
+
+      - name: List running containers
+        run: docker ps -a
+
+      - name: Wait for Neo4j to be ready
+        run: |
+          echo "Waiting for Neo4j service..."
+          sleep 5
+          for i in {1..15}; do
+            if cypher-shell -u neo4j -p test "RETURN 1" > /dev/null 2>&1; then
+              echo "Neo4j is ready!"
+              exit 0
+            fi
+            echo "Waiting for Neo4j to start ($i/15)..."
+            sleep 2
+          done
+          echo "Neo4j did not start in time."
+          exit 1
+
+      - name: Run Neo4j script
+        run: cypher-shell -u neo4j -p test -f test_queries_neo4j.cql
+
+      - name: Upload Neo4j results
+        uses: actions/upload-artifact@v4
+        with:
+          name: neo4j-output
+          path: /tmp/neo4j_output.json
