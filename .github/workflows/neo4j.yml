@@ -35,11 +35,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Neo4j CLI
+      - name: Install Cypher Shell
         run: |
-          docker run --rm neo4j:5.10 cat /var/lib/neo4j/bin/cypher-shell > cypher-shell
-          chmod +x cypher-shell
-          sudo mv cypher-shell /usr/local/bin/cypher-shell
+          wget -qO - https://dist.neo4j.org/cypher-shell/cypher-shell-5.10.0.tar.gz | tar xz
+          sudo mv cypher-shell-5.10.0 /usr/local/bin/cypher-shell
+          sudo chmod +x /usr/local/bin/cypher-shell
+
 
 
       
