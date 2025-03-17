@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - '.github/workflows/neo4j.yml'
-      - 'test_queries_neo4j.cql'  # Если изменяется файл с Neo4j-запросами
+      - 'test_queries_neo4j.cql'
   pull_request:
     branches:
       - main
@@ -25,26 +25,24 @@ jobs:
           - 7474:7474
           - 7687:7687
         env:
-          NEO4J_AUTH: none  # Отключена аутентификация для первого запуска
+          NEO4J_AUTH: none
         options: >-
           --health-cmd "cypher-shell -u neo4j -p test 'RETURN 1'"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install Cypher Shell
         run: |
-          wget -O cypher-shell.deb https://github.com/neo4j/cypher-shell/releases/download/1.1.15/cypher-shell_1.1.15_all.deb
+          wget -qO cypher-shell.deb https://dist.neo4j.org/cypher-shell/cypher-shell_5.10.0_all.deb || \
+          wget -qO cypher-shell.deb https://github.com/neo4j/cypher-shell/releases/download/1.1.15/cypher-shell_1.1.15_all.deb
           sudo dpkg -i cypher-shell.deb
           rm cypher-shell.deb
 
-
-
-
-      
       - name: Check Neo4j CLI version
         run: cypher-shell --version
 
@@ -52,29 +50,31 @@ jobs:
         run: docker ps -a
 
       - name: Check running processes
-        run: netstat -tulnp  # Проверка занятых портов
+        run: sudo netstat -tulnp  # Проверка портов
 
       - name: Wait for Neo4j to be ready
         run: |
           echo "Waiting for Neo4j service..."
           sleep 5
-          for i in {1..15}; do
-            if cypher-shell -u neo4j -p test "RETURN 1" > /dev/null 2>&1; then
+          for i in {1..30}; do
+            STATUS=$(docker inspect --format="{{.State.Health.Status}}" $(docker ps -q --filter "ancestor=neo4j:5.10") 2>/dev/null)
+            if [[ "$STATUS" == "healthy" ]]; then
               echo "Neo4j is ready!"
               exit 0
             fi
-            echo "Waiting for Neo4j to start ($i/15)..."
-            sleep 2
+            echo "Waiting for Neo4j to start ($i/30)..."
+            sleep 5
           done
           echo "Neo4j did not start in time."
-          docker logs neo4j
+          docker logs $(docker ps -q --filter "ancestor=neo4j:5.10")
           exit 1
-      
+
       - name: Debug Neo4j Logs
-        run: docker logs $(docker ps -q --filter "name=neo4j")
+        run: docker logs $(docker ps -q --filter "ancestor=neo4j:5.10")
 
       - name: Run Neo4j script
-        run: cypher-shell -u neo4j -p test -f test_queries_neo4j.cql
+        run: cypher-shell -a bolt://localhost:7687 -u neo4j -p test -f test_queries_neo4j.cql || \
+             cypher-shell -a bolt://localhost:7687 -f test_queries_neo4j.cql
 
       - name: Upload Neo4j results
         uses: actions/upload-artifact@v4
