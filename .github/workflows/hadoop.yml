@@ -27,7 +27,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y openjdk-17-jdk ssh
-
       - name: Download and extract Hadoop
         run: |
           wget -nc -q https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
@@ -35,7 +34,6 @@ jobs:
           mv /opt/hadoop-3.3.6 /opt/hadoop
           echo "HADOOP_HOME=/opt/hadoop" >> $GITHUB_ENV
           echo "PATH=$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH" >> $GITHUB_ENV
-
       - name: Configure SSH for Hadoop
         run: |
           ssh-keygen -t rsa -P "" -f ~/.ssh/id_rsa
@@ -43,7 +41,6 @@ jobs:
           chmod 600 ~/.ssh/authorized_keys
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
           echo "UserKnownHostsFile=/dev/null" >> ~/.ssh/config
-
       - name: Configure Hadoop
         run: |
           cat <<EOF > /opt/hadoop/etc/hadoop/core-site.xml
@@ -54,7 +51,6 @@ jobs:
             </property>
           </configuration>
           EOF
-
           cat <<EOF > /opt/hadoop/etc/hadoop/hdfs-site.xml
           <configuration>
             <property>
@@ -63,7 +59,6 @@ jobs:
             </property>
           </configuration>
           EOF
-
       - name: Format NameNode
         run: /opt/hadoop/bin/hdfs namenode -format
 
@@ -72,16 +67,22 @@ jobs:
           /opt/hadoop/sbin/start-dfs.sh
           sleep 5
           jps  # Проверка запущенных процессов
-
       - name: Create user directory in HDFS
         run: /opt/hadoop/bin/hdfs dfs -mkdir -p /user/runner
+
+      - name: Debug HDFS Paths
+        run: |
+          /opt/hadoop/bin/hdfs dfs -ls /
+          /opt/hadoop/bin/hdfs dfs -ls /user
+          /opt/hadoop/bin/hdfs dfs -ls /user/runner
+
+      - name: Check Hadoop Processes
+        run: jps
 
       - name: Verify test SQL file
         run: |
           ls -l
           cat test_queries_hadoop.sql || echo "Файл test_queries_hadoop.sql не найден!"
-
-
       - name: Run Hadoop test queries
         run: /opt/hadoop/bin/hdfs dfs -put test_queries_hadoop.sql /user/runner/
 
@@ -90,3 +91,4 @@ jobs:
         with:
           name: hadoop-output
           path: /user/runner/test_queries_hadoop.sql
+
