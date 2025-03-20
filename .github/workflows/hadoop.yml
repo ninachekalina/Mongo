@@ -6,17 +6,17 @@ on:
       - main
     paths:
       - '.github/workflows/hadoop.yml'
-      - 'hadoop/**'
+      - 'test_queries_hadoop.sql'
   pull_request:
     branches:
       - main
     paths:
       - '.github/workflows/hadoop.yml'
-      - 'hadoop/**'
+      - 'test_queries_hadoop.sql'
   workflow_dispatch:
 
 jobs:
-  hadoop:
+  test-hadoop:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,21 +26,27 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y openjdk-11-jdk wget ssh rsync
+          sudo apt-get install -y openjdk-17-jdk ssh
 
-      - name: Download and setup Hadoop
+      - name: Download and extract Hadoop
         run: |
-          wget https://archive.apache.org/dist/hadoop/core/hadoop-3.3.6/hadoop-3.3.6.tar.gz
-          tar -xvzf hadoop-3.3.6.tar.gz
-          mv hadoop-3.3.6 $HOME/hadoop
-          echo 'export HADOOP_HOME=$HOME/hadoop' >> $HOME/.bashrc
-          echo 'export PATH=$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH' >> $HOME/.bashrc
-          echo 'export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64' >> $HOME/.bashrc
-          source $HOME/.bashrc
+          wget -nc -q https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
+          tar -xzf hadoop-3.3.6.tar.gz -C /opt/
+          mv /opt/hadoop-3.3.6 /opt/hadoop
+          echo "HADOOP_HOME=/opt/hadoop" >> $GITHUB_ENV
+          echo "PATH=$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH" >> $GITHUB_ENV
+
+      - name: Configure SSH for Hadoop
+        run: |
+          ssh-keygen -t rsa -P "" -f ~/.ssh/id_rsa
+          cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+          chmod 600 ~/.ssh/authorized_keys
+          echo "StrictHostKeyChecking no" >> ~/.ssh/config
+          echo "UserKnownHostsFile=/dev/null" >> ~/.ssh/config
 
       - name: Configure Hadoop
         run: |
-          cat <<EOF > $HOME/hadoop/etc/hadoop/core-site.xml
+          cat <<EOF > /opt/hadoop/etc/hadoop/core-site.xml
           <configuration>
             <property>
               <name>fs.defaultFS</name>
@@ -49,7 +55,7 @@ jobs:
           </configuration>
           EOF
 
-          cat <<EOF > $HOME/hadoop/etc/hadoop/hdfs-site.xml
+          cat <<EOF > /opt/hadoop/etc/hadoop/hdfs-site.xml
           <configuration>
             <property>
               <name>dfs.replication</name>
@@ -59,23 +65,22 @@ jobs:
           EOF
 
       - name: Format NameNode
-        run: |
-          $HOME/hadoop/bin/hdfs namenode -format
+        run: /opt/hadoop/bin/hdfs namenode -format
 
-      - name: Start Hadoop Services
+      - name: Start Hadoop
         run: |
-          $HOME/hadoop/sbin/start-dfs.sh
-          sleep 5  # Даем время сервисам запуститься
+          /opt/hadoop/sbin/start-dfs.sh
+          sleep 5
+          jps  # Проверка запущенных процессов
 
-      - name: Run HDFS commands
-        run: |
-          $HOME/hadoop/bin/hdfs dfs -mkdir /user
-          $HOME/hadoop/bin/hdfs dfs -mkdir /user/test
-          echo "Hello Hadoop" > test.txt
-          $HOME/hadoop/bin/hdfs dfs -put test.txt /user/test/
-          $HOME/hadoop/bin/hdfs dfs -ls /user/test
+      - name: Create user directory in HDFS
+        run: /opt/hadoop/bin/hdfs dfs -mkdir -p /user/runner
 
-      - name: Run WordCount MapReduce example
-        run: |
-          $HOME/hadoop/bin/hadoop jar $HOME/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.6.jar wordcount /user/test/test.txt /user/test/output
-          $HOME/hadoop/bin/hdfs dfs -cat /user/test/output/part-r-00000
+      - name: Run Hadoop test queries
+        run: /opt/hadoop/bin/hdfs dfs -put test_queries_hadoop.sql /user/runner/
+
+      - name: Upload Hadoop results
+        uses: actions/upload-artifact@v4
+        with:
+          name: hadoop-output
+          path: /user/runner/test_queries_hadoop.sql
