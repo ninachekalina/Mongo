@@ -76,6 +76,12 @@ jobs:
       - name: Create user directory in HDFS
         run: /opt/hadoop/bin/hdfs dfs -mkdir -p /user/runner
 
+      - name: Verify test SQL file
+        run: |
+          ls -l
+          cat test_queries_hadoop.sql || echo "Файл test_queries_hadoop.sql не найден!"
+
+
       - name: Run Hadoop test queries
         run: /opt/hadoop/bin/hdfs dfs -put test_queries_hadoop.sql /user/runner/
 
