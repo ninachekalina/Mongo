@@ -1,0 +1,81 @@
+name: Hadoop CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/hadoop.yml'
+      - 'hadoop/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/hadoop.yml'
+      - 'hadoop/**'
+  workflow_dispatch:
+
+jobs:
+  hadoop:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-11-jdk wget ssh rsync
+
+      - name: Download and setup Hadoop
+        run: |
+          wget https://archive.apache.org/dist/hadoop/core/hadoop-3.3.6/hadoop-3.3.6.tar.gz
+          tar -xvzf hadoop-3.3.6.tar.gz
+          mv hadoop-3.3.6 $HOME/hadoop
+          echo 'export HADOOP_HOME=$HOME/hadoop' >> $HOME/.bashrc
+          echo 'export PATH=$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH' >> $HOME/.bashrc
+          echo 'export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64' >> $HOME/.bashrc
+          source $HOME/.bashrc
+
+      - name: Configure Hadoop
+        run: |
+          cat <<EOF > $HOME/hadoop/etc/hadoop/core-site.xml
+          <configuration>
+            <property>
+              <name>fs.defaultFS</name>
+              <value>hdfs://localhost:9000</value>
+            </property>
+          </configuration>
+          EOF
+
+          cat <<EOF > $HOME/hadoop/etc/hadoop/hdfs-site.xml
+          <configuration>
+            <property>
+              <name>dfs.replication</name>
+              <value>1</value>
+            </property>
+          </configuration>
+          EOF
+
+      - name: Format NameNode
+        run: |
+          $HOME/hadoop/bin/hdfs namenode -format
+
+      - name: Start Hadoop Services
+        run: |
+          $HOME/hadoop/sbin/start-dfs.sh
+          sleep 5  # Даем время сервисам запуститься
+
+      - name: Run HDFS commands
+        run: |
+          $HOME/hadoop/bin/hdfs dfs -mkdir /user
+          $HOME/hadoop/bin/hdfs dfs -mkdir /user/test
+          echo "Hello Hadoop" > test.txt
+          $HOME/hadoop/bin/hdfs dfs -put test.txt /user/test/
+          $HOME/hadoop/bin/hdfs dfs -ls /user/test
+
+      - name: Run WordCount MapReduce example
+        run: |
+          $HOME/hadoop/bin/hadoop jar $HOME/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.6.jar wordcount /user/test/test.txt /user/test/output
+          $HOME/hadoop/bin/hdfs dfs -cat /user/test/output/part-r-00000
