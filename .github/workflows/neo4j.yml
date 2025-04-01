@@ -101,7 +101,7 @@ jobs:
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN s.listed_in, avg(toInteger(s.duration)) AS avg_duration ORDER BY avg_duration DESC;"
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.release_year = 2021 RETURN COUNT(s);"
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.description IS NOT NULL AND s.description <> '' RETURN s.description ORDER BY size(s.description) DESC LIMIT 5;"
-          cypher-shell -a bolt://localhost:7687l -u neo4j -p test "MATCH (s:Show) RETURN s.title ORDER BY toInteger(s.duration) DESC LIMIT 5;"
+          cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN s.title ORDER BY toInteger(s.duration) DESC LIMIT 5;"
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (a:Actor)-[:ACTED_IN]->(m:Movie) RETURN a.name, collect(m.title) LIMIT 5;"
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN count(*) AS total_count;"
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show)-[:LISTED_IN]->(g:Genre) RETURN g.name, COUNT(s) ORDER BY COUNT(s) DESC LIMIT 5;"
