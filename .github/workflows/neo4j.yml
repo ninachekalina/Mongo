@@ -81,6 +81,37 @@ jobs:
           mkdir -p data
           kaggle datasets download -d chekalinanina/netflix-titles -p data --unzip
 
+      - name: Import Netflix dataset into Neo4j
+        run: |
+          cypher-shell -a bolt://localhost:7687 -u neo4j -p test "CREATE CONSTRAINT IF NOT EXISTS FOR (s:Show) REQUIRE s.show_id IS UNIQUE;"
+          cypher-shell -a bolt://localhost:7687 -u neo4j -p test "LOAD CSV WITH HEADERS FROM 'file:///data/netflix-titles.csv' AS row
+          MERGE (s:Show {show_id: row.show_id})
+          SET s.title = row.title, 
+              s.type = row.type, 
+              s.director = row.director,
+              s.cast = row.cast,
+              s.country = row.country,
+              s.release_year = toInteger(row.release_year),
+              s.rating = row.rating,
+              s.duration = row.duration,
+              s.listed_in = row.listed_in,
+              s.description = row.description;"
+      - name: Create relationships
+        run: |
+          cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) 
+          WITH s, split(s.cast, ', ') AS actors
+          UNWIND actors AS actor
+          MERGE (a:Actor {name: actor})
+          MERGE (a)-[:ACTED_IN]->(s);"
+
+          cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) 
+          WITH s, split(s.listed_in, ', ') AS genres
+          UNWIND genres AS genre
+          MERGE (g:Genre {name: genre})
+          MERGE (s)-[:LISTED_IN]->(g);"
+
+
+
       - name: Run Cypher queries
         run: |
           #cypher-shell -a bolt://localhost:7687 -u neo4j -p test 'CREATE (:Movie {title: "Inception", release_year: 2010});'
