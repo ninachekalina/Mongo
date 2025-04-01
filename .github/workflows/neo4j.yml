@@ -108,10 +108,7 @@ jobs:
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show)-[:LISTED_IN]->(g:Genre) RETURN g.name, avg(toInteger(s.duration)) AS avg_duration ORDER BY avg_duration DESC LIMIT 5;"
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (a:Actor)-[:ACTED_IN]->(m:Movie) RETURN a.name, COUNT(m) ORDER BY COUNT(m) DESC LIMIT 5;"
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show)-[:DIRECTED_BY]->(d:Director) RETURN d.name, COUNT(s) ORDER BY COUNT(s) DESC LIMIT 5;"
-
-      - name: Upload Neo4j results
-
-    
+  
       - name: Save query results as CSV
         run: |
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test --format plain \
