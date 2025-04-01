@@ -72,10 +72,14 @@ jobs:
       - name: Debug Neo4j Logs
         run: docker logs $(docker ps -q --filter "ancestor=neo4j:5.10")
 
-      - name: Download Netflix dataset
+      - name: Download Netflix dataset from Kaggle
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
+          pip install kaggle
           mkdir -p data
-          wget -O data/netflix.csv "https://www.kaggle.com/datasets/chekalinanina/netflix-titles/netflix_titles.csv"
+          kaggle datasets download -d chekalinanina/netflix-titles -p data --unzip
 
       - name: Run Cypher queries
         run: |
