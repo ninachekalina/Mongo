@@ -75,7 +75,7 @@ jobs:
       - name: Download Netflix dataset
         run: |
           mkdir -p data
-          wget -O data/netflix.csv "https://www.kaggle.com/datasets/chekalinanina/netflix-titles.csv"
+          wget -O data/netflix.csv "https://www.kaggle.com/datasets/chekalinanina/netflix-titles/netflix_titles.csv"
 
       - name: Run Cypher queries
         run: |
