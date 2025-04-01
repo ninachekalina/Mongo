@@ -72,12 +72,29 @@ jobs:
       - name: Debug Neo4j Logs
         run: docker logs $(docker ps -q --filter "ancestor=neo4j:5.10")
 
-      - name: Run Neo4j script
-        run: cypher-shell -a bolt://localhost:7687 -u neo4j -p test -f test_queries_neo4j.cql || \
-             cypher-shell -a bolt://localhost:7687 -f test_queries_neo4j.cql
+      - name: Download Netflix dataset
+        run: |
+          mkdir -p data
+          wget -O data/netflix.csv "https://www.kaggle.com/datasets/chekalinanina/netflix-titles.csv"
+
+      - name: Run Cypher queries
+        run: |
+          cypher-shell -a bolt://localhost:7687 -u neo4j -p test 'CREATE (:Movie {title: "Inception", release_year: 2010});'
+          cypher-shell -a bolt://localhost:7687 -u neo4j -p test 'CREATE (:Actor {name: "Leonardo DiCaprio"});'
+          cypher-shell -a bolt://localhost:7687 -u neo4j -p test 'MATCH (m:Movie {title: "Inception"}), (a:Actor {name: "Leonardo DiCaprio"}) CREATE (a)-[:ACTED_IN]->(m);'
+      - name: Save query results as CSV
+        run: |
+          cypher-shell -a bolt://localhost:7687 -u neo4j -p test --format plain \
+            'MATCH (m:Movie) RETURN m.title, m.release_year;' > /tmp/neo4j_output.csv
+
+
+     # - name: Run Neo4j script
+      #  run: cypher-shell -a bolt://localhost:7687 -u neo4j -p test -f test_queries_neo4j.cql || \
+          #   cypher-shell -a bolt://localhost:7687 -f test_queries_neo4j.cql
 
       - name: Upload Neo4j results
         uses: actions/upload-artifact@v4
         with:
           name: neo4j-output
-          path: /tmp/neo4j_output.json
+          path: /tmp/neo4j_output.csv
+
