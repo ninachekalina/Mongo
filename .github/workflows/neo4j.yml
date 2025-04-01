@@ -96,7 +96,7 @@ jobs:
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.duration IS NOT NULL RETURN avg(toInteger(s.duration)) AS avg_duration;"
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.country = 'United States' RETURN s.title LIMIT 5;"
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN s.release_year, COUNT(*) AS count ORDER BY count DESC;"
-          cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE NOT EXISTS(s.director) RETURN s.title LIMIT 5;"
+          cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.director IS NULL RETURN s.title LIMIT 5;"
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN s.country, COUNT(*) AS count ORDER BY count DESC;"
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN s.listed_in, avg(toInteger(s.duration)) AS avg_duration ORDER BY avg_duration DESC;"
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.release_year = 2021 RETURN COUNT(s);"
