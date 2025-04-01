@@ -80,6 +80,11 @@ jobs:
           pip install kaggle
           mkdir -p data
           kaggle datasets download -d chekalinanina/netflix-titles -p data --unzip
+          ls -lah data/  # Проверка наличия скачанного файла
+
+      - name: Check downloaded files
+        run: ls -lah data/
+
 
       - name: Move dataset to Neo4j import directory
         run: |
