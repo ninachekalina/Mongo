@@ -81,10 +81,14 @@ jobs:
           mkdir -p data
           kaggle datasets download -d chekalinanina/netflix-titles -p data --unzip
 
+      - name: Move dataset to Neo4j import directory
+        run: |
+          docker cp data/netflix-titles.csv $(docker ps -q --filter "ancestor=neo4j:5.10"):/var/lib/neo4j/import/netflix-titles.csv
+
+
       - name: Import Netflix dataset into Neo4j
         run: |
-          cypher-shell -a bolt://localhost:7687 -u neo4j -p test "CREATE CONSTRAINT IF NOT EXISTS FOR (s:Show) REQUIRE s.show_id IS UNIQUE;"
-          cypher-shell -a bolt://localhost:7687 -u neo4j -p test "LOAD CSV WITH HEADERS FROM 'file:///data/netflix-titles.csv' AS row
+          cypher-shell -a bolt://localhost:7687 -u neo4j -p test "LOAD CSV WITH HEADERS FROM 'file:///netflix-titles.csv' AS row
           MERGE (s:Show {show_id: row.show_id})
           SET s.title = row.title, 
               s.type = row.type, 
@@ -96,6 +100,7 @@ jobs:
               s.duration = row.duration,
               s.listed_in = row.listed_in,
               s.description = row.description;"
+
       - name: Create relationships
         run: |
           cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) 
