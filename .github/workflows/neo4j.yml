@@ -217,7 +217,7 @@ jobs:
 
       - name: Extract query result from CSV
         run: |
-          QUERY_KEY="${{ github.event.inputs.query_key }}"
+          QUERY_KEY="${{ github.event.client_payload.query_key }}"
           CSV_FILE="/tmp/neo4j_output.csv"
 
           if [[ -z "$QUERY_KEY" ]]; then
