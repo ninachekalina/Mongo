@@ -14,6 +14,10 @@ on:
       - '.github/workflows/neo4j.yml'
       - 'test_queries_neo4j.cql'
   workflow_dispatch:
+    inputs:
+      query_key:
+        description: 'key to extract query from artifact'
+        required: false
 
 jobs:
   test-neo4j:
@@ -205,6 +209,31 @@ jobs:
         run: |
           ls -lah /tmp/
           cat /tmp/neo4j_output.csv || echo "Файл пустой!"
+  extract-query:
+    needs: test-neo4j
+    runs-on: ubuntu-latest
+    if: github.event.inputs.query_key != ''
+
+    steps:
+      - name: Download Query Results
+        uses: actions/download-artifact@v4
+        with:
+          name: neo4j-output
+          path: /tmp
+
+      - name: Extract Query Result
+        run: |
+          QUERY_KEY="${{ github.event.inputs.query_key }}"
+          OUTPUT_FILE="/tmp/neo4j_output.csv"
+          RESULT=$(awk -F',' -v key="$QUERY_KEY" '$1 == key {print $2}' "$OUTPUT_FILE")
+          echo "Extracted result: $RESULT"
+          echo "RESULT=$RESULT" >> $GITHUB_ENV
+
+      - name: Save Extracted Result
+        uses: actions/upload-artifact@v4
+        with:
+          name: extracted-query-result
+          path: /tmp/extracted_result.txt
 
 
 
