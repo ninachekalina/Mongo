@@ -162,7 +162,7 @@ jobs:
 
       - name: Save all query results to CSV
         run: |
-          OUTPUT_FILE="/tmp/neo4j_output.csv"
+          OUTPUT_FILE="/tmp/neo4j_output.txt"
           echo "query_name,result" > $OUTPUT_FILE  # Заголовок CSV
 
           function run_query {
@@ -202,40 +202,20 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: neo4j-output
-          path: /tmp/neo4j_output.csv
+          path: /tmp/neo4j_output.txt
 
 
       - name: Debug Neo4j output file
         run: |
           ls -lah /tmp/
-          cat /tmp/neo4j_output.csv || echo "Файл пустой!"
+          cat /tmp/neo4j_output.txt || echo "Файл пустой!"
       - name: Download Neo4j output artifact
         uses: actions/download-artifact@v4
         with:
           name: neo4j-output
           path: /tmp/
 
-      - name: Extract query result from CSV
-        run: |
-          QUERY_KEY="${{ github.event.client_payload.query_key }}"
-          CSV_FILE="/tmp/neo4j_output.csv"
-
-          if [[ -z "$QUERY_KEY" ]]; then
-            echo "⚠️ query_key не указан, выход"
-            exit 1
-          fi
-
-          awk -v key="$QUERY_KEY" '
-            $0 ~ key {found=1; next} 
-            found && NF {print}
-            /^$/ {found=0}
-          ' "$CSV_FILE" > /tmp/query_result.txt
-          cat /tmp/query_result.txt || echo "⚠️ Не найдено результатов для ключа: $QUERY_KEY"
-      - name: Show extracted query result
-        run: cat /tmp/query_result.txt
-
-
- 
+    
 
 
      # - name: Run Neo4j script
