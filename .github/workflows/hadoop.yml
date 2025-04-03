@@ -26,8 +26,8 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y openjdk-17-jdk ssh
-      
+          sudo apt-get install -y openjdk-17-jdk ssh unzip wget
+
       - name: Download and extract Hadoop
         run: |
           wget -nc -q https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
@@ -35,7 +35,7 @@ jobs:
           mv /opt/hadoop-3.3.6 /opt/hadoop
           echo "HADOOP_HOME=/opt/hadoop" >> $GITHUB_ENV
           echo "PATH=$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH" >> $GITHUB_ENV
-      
+
       - name: Configure SSH for Hadoop
         run: |
           ssh-keygen -t rsa -P "" -f ~/.ssh/id_rsa
@@ -43,7 +43,7 @@ jobs:
           chmod 600 ~/.ssh/authorized_keys
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
           echo "UserKnownHostsFile=/dev/null" >> ~/.ssh/config
-      
+
       - name: Configure Hadoop
         run: |
           cat <<EOF > /opt/hadoop/etc/hadoop/core-site.xml
@@ -62,7 +62,7 @@ jobs:
             </property>
           </configuration>
           EOF
-      
+
       - name: Format NameNode
         run: /opt/hadoop/bin/hdfs namenode -format
 
@@ -71,36 +71,58 @@ jobs:
           /opt/hadoop/sbin/start-dfs.sh
           sleep 5
           jps  # Проверка запущенных процессов
-      
-      - name: Create user directory in HDFS
-        run: /opt/hadoop/bin/hdfs dfs -mkdir -p /user/runner
 
-      - name: Check HDFS before put
-        run: /opt/hadoop/bin/hdfs dfs -ls /user/runner
-
-      - name: Test HDFS connectivity
-        run: /opt/hadoop/bin/hdfs dfsadmin -report
-
-      - name: Verify test SQL file
+      - name: Create necessary HDFS directories
         run: |
-          ls -l
-          cat test_queries_hadoop.sql || echo "Файл test_queries_hadoop.sql не найден!"
-      
-      - name: Create /tmp/ directory in HDFS
+          /opt/hadoop/bin/hdfs dfs -mkdir -p /user/runner
+          /opt/hadoop/bin/hdfs dfs -mkdir -p /data
+          /opt/hadoop/bin/hdfs dfs -chmod 777 /data
+
+      - name: Download Russian Demography dataset from Kaggle
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
-          /opt/hadoop/bin/hdfs dfs -mkdir -p /tmp/
-          /opt/hadoop/bin/hdfs dfs -chmod 777 /tmp/
+          pip install kaggle
+          mkdir -p data
+          kaggle datasets download -d chekalinanina/russian-demography -p data --unzip
+          ls -lah data/  # Проверка наличия скачанных файлов
 
-      - name: Try alternative put
-        run: /opt/hadoop/bin/hdfs dfs -put test_queries_hadoop.sql /tmp/
+      - name: Upload dataset to HDFS
+        run: |
+          /opt/hadoop/bin/hdfs dfs -put data/* /data/
+          /opt/hadoop/bin/hdfs dfs -ls /data/ > hdfs_log.txt
 
-      - name: Run Hadoop test queries
-        run: /opt/hadoop/bin/hdfs dfs -put test_queries_hadoop.sql /user/runner/
+      - name: Run HDFS operations
+        run: |
+          echo "Checking dataset size in HDFS" >> hdfs_log.txt
+          /opt/hadoop/bin/hdfs dfs -du -h /data/ >> hdfs_log.txt
 
-      
-      - name: Upload Hadoop results
+          echo "Displaying first few lines of CSV files" >> hdfs_log.txt
+          for file in $(/opt/hadoop/bin/hdfs dfs -ls /data/ | awk '{print $8}'); do
+            /opt/hadoop/bin/hdfs dfs -cat $file | head -n 5 >> hdfs_log.txt
+          done
+
+          echo "Copy dataset within HDFS" >> hdfs_log.txt
+          /opt/hadoop/bin/hdfs dfs -cp /data/*.csv /data/backup/
+          /opt/hadoop/bin/hdfs dfs -ls /data/backup/ >> hdfs_log.txt
+
+          echo "Move dataset within HDFS" >> hdfs_log.txt
+          /opt/hadoop/bin/hdfs dfs -mv /data/*.csv /data/moved/
+          /opt/hadoop/bin/hdfs dfs -ls /data/moved/ >> hdfs_log.txt
+
+          echo "Search for keyword 'birth' in dataset" >> hdfs_log.txt
+          /opt/hadoop/bin/hdfs dfs -cat /data/moved/*.csv | grep -i "birth" | head -n 10 >> hdfs_log.txt
+
+          echo "Check file replication" >> hdfs_log.txt
+          /opt/hadoop/bin/hdfs dfs -stat %r /data/moved/*.csv >> hdfs_log.txt
+
+          echo "Remove backup dataset" >> hdfs_log.txt
+          /opt/hadoop/bin/hdfs dfs -rm -r /data/backup/
+          /opt/hadoop/bin/hdfs dfs -ls /data/ >> hdfs_log.txt
+
+      - name: Save Hadoop HDFS logs
         uses: actions/upload-artifact@v4
         with:
-          name: hadoop-output
-          path: test_queries_hadoop.sql
-
+          name: hadoop-hdfs-logs
+          path: hdfs_log.txt
