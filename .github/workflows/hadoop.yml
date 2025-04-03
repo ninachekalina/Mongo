@@ -4,16 +4,15 @@ on:
   push:
     branches:
       - main
-    paths:
-      - '.github/workflows/hadoop.yml'
-      - 'test_queries_hadoop.sql'
   pull_request:
     branches:
       - main
-    paths:
-      - '.github/workflows/hadoop.yml'
-      - 'test_queries_hadoop.sql'
   workflow_dispatch:
+    inputs:
+      command_key:
+        description: 'Command Key (size, head, move, grep, replication, delete)'
+        required: true
+        default: 'size'
 
 jobs:
   test-hadoop:
@@ -70,13 +69,15 @@ jobs:
         run: |
           /opt/hadoop/sbin/start-dfs.sh
           sleep 5
-          jps  # Проверка запущенных процессов
+          jps  
 
-      - name: Create necessary HDFS directories
+      - name: Create HDFS directories
         run: |
           /opt/hadoop/bin/hdfs dfs -mkdir -p /user/runner
           /opt/hadoop/bin/hdfs dfs -mkdir -p /data
           /opt/hadoop/bin/hdfs dfs -chmod 777 /data
+          /opt/hadoop/bin/hdfs dfs -mkdir -p /data/backup/
+          /opt/hadoop/bin/hdfs dfs -mkdir -p /data/moved/
 
       - name: Download Russian Demography dataset from Kaggle
         env:
@@ -86,40 +87,48 @@ jobs:
           pip install kaggle
           mkdir -p data
           kaggle datasets download -d chekalinanina/russian-demography -p data --unzip
-          ls -lah data/  # Проверка наличия скачанных файлов
+          ls -lah data/
 
       - name: Upload dataset to HDFS
         run: |
           /opt/hadoop/bin/hdfs dfs -put data/* /data/
           /opt/hadoop/bin/hdfs dfs -ls /data/ > hdfs_log.txt
 
-      - name: Run HDFS operations
+      - name: Run HDFS operation based on input key
         run: |
-          echo "Checking dataset size in HDFS" >> hdfs_log.txt
-          /opt/hadoop/bin/hdfs dfs -du -h /data/ >> hdfs_log.txt
-
-          echo "Displaying first few lines of CSV files" >> hdfs_log.txt
-          for file in $(/opt/hadoop/bin/hdfs dfs -ls /data/ | awk '{print $8}'); do
-            /opt/hadoop/bin/hdfs dfs -cat $file | head -n 5 >> hdfs_log.txt
-          done
-
-          echo "Copy dataset within HDFS" >> hdfs_log.txt
-          /opt/hadoop/bin/hdfs dfs -cp /data/*.csv /data/backup/
-          /opt/hadoop/bin/hdfs dfs -ls /data/backup/ >> hdfs_log.txt
-
-          echo "Move dataset within HDFS" >> hdfs_log.txt
-          /opt/hadoop/bin/hdfs dfs -mv /data/*.csv /data/moved/
-          /opt/hadoop/bin/hdfs dfs -ls /data/moved/ >> hdfs_log.txt
-
-          echo "Search for keyword 'birth' in dataset" >> hdfs_log.txt
-          /opt/hadoop/bin/hdfs dfs -cat /data/moved/*.csv | grep -i "birth" | head -n 10 >> hdfs_log.txt
-
-          echo "Check file replication" >> hdfs_log.txt
-          /opt/hadoop/bin/hdfs dfs -stat %r /data/moved/*.csv >> hdfs_log.txt
-
-          echo "Remove backup dataset" >> hdfs_log.txt
-          /opt/hadoop/bin/hdfs dfs -rm -r /data/backup/
-          /opt/hadoop/bin/hdfs dfs -ls /data/ >> hdfs_log.txt
+          case "${{ github.event.inputs.command_key }}" in
+            "size")
+              echo "Checking dataset size in HDFS" >> hdfs_log.txt
+              /opt/hadoop/bin/hdfs dfs -du -h /data/ >> hdfs_log.txt
+              ;;
+            "head")
+              echo "Displaying first few lines of CSV files" >> hdfs_log.txt
+              for file in $(/opt/hadoop/bin/hdfs dfs -ls /data/ | awk '{print $8}'); do
+                /opt/hadoop/bin/hdfs dfs -cat $file | head -n 5 >> hdfs_log.txt
+              done
+              ;;
+            "move")
+              echo "Move dataset within HDFS" >> hdfs_log.txt
+              /opt/hadoop/bin/hdfs dfs -mv /data/*.csv /data/moved/
+              /opt/hadoop/bin/hdfs dfs -ls /data/moved/ >> hdfs_log.txt
+              ;;
+            "grep")
+              echo "Search for keyword 'birth' in dataset" >> hdfs_log.txt
+              /opt/hadoop/bin/hdfs dfs -cat /data/moved/*.csv | grep -i "birth" | head -n 10 >> hdfs_log.txt
+              ;;
+            "replication")
+              echo "Check file replication" >> hdfs_log.txt
+              /opt/hadoop/bin/hdfs dfs -stat %r /data/moved/*.csv >> hdfs_log.txt
+              ;;
+            "delete")
+              echo "Remove backup dataset" >> hdfs_log.txt
+              /opt/hadoop/bin/hdfs dfs -rm -r /data/backup/
+              /opt/hadoop/bin/hdfs dfs -ls /data/ >> hdfs_log.txt
+              ;;
+            *)
+              echo "Invalid command key: ${GITHUB_EVENT_INPUTS_COMMAND_KEY}" >> hdfs_log.txt
+              ;;
+          esac
 
       - name: Save Hadoop HDFS logs
         uses: actions/upload-artifact@v4
