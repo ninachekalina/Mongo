@@ -39,6 +39,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Install jq
+        run: sudo apt-get install -y jq
 
       - name: Install Cypher Shell
         run: |
@@ -127,51 +129,22 @@ jobs:
 
 
 
-      #- name: Run Cypher queries
-       # run: |
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test 'CREATE (:Movie {title: "Inception", release_year: 2010});'
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test 'CREATE (:Actor {name: "Leonardo DiCaprio"});'
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test 'MATCH (m:Movie {title: "Inception"}), (a:Actor {name: "Leonardo DiCaprio"}) CREATE (a)-[:ACTED_IN]->(m);'
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN s.title, s.type LIMIT 10;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.type = 'Movie' RETURN s.title LIMIT 10;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN s.listed_in, COUNT(*) AS count ORDER BY count DESC;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN s.rating, COUNT(*) AS count ORDER BY count DESC;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.release_year > 2015 RETURN s.title, s.release_year;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.rating = 'PG-13' RETURN s.title;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (a:Actor)-[:ACTED_IN]->(m:Movie) RETURN a.name, COUNT(m) AS movies ORDER BY movies DESC;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.duration IS NOT NULL RETURN avg(toInteger(s.duration)) AS avg_duration;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.country = 'United States' RETURN s.title LIMIT 5;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN s.release_year, COUNT(*) AS count ORDER BY count DESC;"
-         # cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.director IS NULL RETURN s.title LIMIT 5;"
-         # cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN s.country, COUNT(*) AS count ORDER BY count DESC;"
-         # cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN s.listed_in, avg(toInteger(s.duration)) AS avg_duration ORDER BY avg_duration DESC;"
-         # cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.release_year = 2021 RETURN COUNT(s);"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) WHERE s.description IS NOT NULL AND s.description <> '' RETURN s.description ORDER BY size(s.description) DESC LIMIT 5;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN s.title ORDER BY toInteger(s.duration) DESC LIMIT 5;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (a:Actor)-[:ACTED_IN]->(m:Movie) RETURN a.name, collect(m.title) LIMIT 5;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show) RETURN count(*) AS total_count;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show)-[:LISTED_IN]->(g:Genre) RETURN g.name, COUNT(s) ORDER BY COUNT(s) DESC LIMIT 5;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show)-[:LISTED_IN]->(g:Genre) RETURN g.name, avg(toInteger(s.duration)) AS avg_duration ORDER BY avg_duration DESC LIMIT 5;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (a:Actor)-[:ACTED_IN]->(m:Movie) RETURN a.name, COUNT(m) ORDER BY COUNT(m) DESC LIMIT 5;"
-          #cypher-shell -a bolt://localhost:7687 -u neo4j -p test "MATCH (s:Show)-[:DIRECTED_BY]->(d:Director) RETURN d.name, COUNT(s) ORDER BY COUNT(s) DESC LIMIT 5;"
-  
-      #- name: Save query results as CSV
-        #run: |
-        #  cypher-shell -a bolt://localhost:7687 -u neo4j -p test --format plain \
-           # 'MATCH (s:Show) RETURN s.title, s.release_year;' > /tmp/neo4j_output.csv
+     
 
-      - name: Save all query results to CSV
+      
+
+      - name: Save all query results to JSON
         run: |
-          OUTPUT_FILE="/tmp/neo4j_output.txt"
-          echo "query_name,result" > $OUTPUT_FILE  # Заголовок CSV
+          OUTPUT_FILE="/tmp/neo4j_output.json"
+          echo "{" > $OUTPUT_FILE  # Начало JSON объекта
 
           function run_query {
             QUERY=$1
             NAME=$2
             RESULT=$(cypher-shell -a bolt://localhost:7687 -u neo4j -p test --format plain "$QUERY" | tail -n +2)
-            echo "$NAME" >> $OUTPUT_FILE  # Записываем название запроса в столбик
-            echo "$RESULT" >> $OUTPUT_FILE  # Записываем результат в столбик
-            echo "" >> $OUTPUT_FILE  # Добавляем пустую строку для разделения блоков
+            # Преобразуем результат в JSON
+            JSON_RESULT=$(echo "$RESULT" | jq -R -s -c 'split("\n") | map(select(length > 0)) | { (.[0]): .[1:] }')
+            echo "\"$NAME\": $JSON_RESULT," >> $OUTPUT_FILE  # Записываем название запроса и результат в JSON
           }
 
           run_query "MATCH (s:Show) RETURN s.title, s.type LIMIT 10;" "show_titles"
@@ -197,29 +170,22 @@ jobs:
           run_query "MATCH (a:Actor)-[:ACTED_IN]->(m:Movie) RETURN a.name, COUNT(m) ORDER BY COUNT(m) DESC LIMIT 5;" "top_actors_movies"
           run_query "MATCH (s:Show)-[:DIRECTED_BY]->(d:Director) RETURN d.name, COUNT(s) ORDER BY COUNT(s) DESC LIMIT 5;" "top_directors"
 
+          echo "}" >> $OUTPUT_FILE  # Закрытие JSON объекта
     
-      - name: Upload Neo4j results as CSV
-        uses: actions/upload-artifact@v4
-        with:
-          name: neo4j-output
-          path: /tmp/neo4j_output.txt
 
 
       - name: Debug Neo4j output file
         run: |
           ls -lah /tmp/
-          cat /tmp/neo4j_output.txt || echo "Файл пустой!"
-      - name: Download Neo4j output artifact
-        uses: actions/download-artifact@v4
+          cat /tmp/neo4j_output.json || echo "Файл пустой!"
+      - name: Upload Neo4j results as JSON
+        uses: actions/upload-artifact@v4
         with:
           name: neo4j-output
-          path: /tmp/
+          path: /tmp/neo4j_output.json
 
     
 
 
-     # - name: Run Neo4j script
-      #  run: cypher-shell -a bolt://localhost:7687 -u neo4j -p test -f test_queries_neo4j.cql || \
-          #   cypher-shell -a bolt://localhost:7687 -f test_queries_neo4j.cql
 
      
