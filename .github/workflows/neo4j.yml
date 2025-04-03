@@ -136,15 +136,23 @@ jobs:
         run: |
           OUTPUT_FILE="/tmp/neo4j_output.json"
           echo "{" > $OUTPUT_FILE  # Начало JSON объекта
+          FIRST=true  # Флаг для первой записи в JSON
 
           function run_query {
             QUERY=$1
             NAME=$2
-            RESULT=$(cypher-shell -a bolt://localhost:7687 -u neo4j -p test --format plain "$QUERY" | tail -n +2 | tr '\n' ',' | sed 's/,$//')  # Удаляем последнюю запятую
+            RESULT=$(cypher-shell -a bolt://localhost:7687 -u neo4j -p test --format plain "$QUERY" | tail -n +2 | jq -R . | paste -sd "," -)  # Корректный JSON
+
             if [ -n "$RESULT" ]; then  # Проверяем, что результат не пустой
-              echo "\"$NAME\": [$RESULT]," >> $OUTPUT_FILE  # Записываем название запроса и результат в JSON
+              if [ "$FIRST" = true ]; then
+                FIRST=false
+              else
+                echo "," >> $OUTPUT_FILE  # Добавляем запятую перед следующей записью
+              fi
+              echo "\"$NAME\": [$RESULT]" >> $OUTPUT_FILE  # Записываем данные
             fi
           }
+
 
           run_query "MATCH (s:Show) RETURN s.title, s.type LIMIT 10;" "show_titles"
           run_query "MATCH (s:Show) WHERE s.type = 'Movie' RETURN s.title LIMIT 10;" "movies_titles"
@@ -170,6 +178,7 @@ jobs:
           run_query "MATCH (s:Show)-[:DIRECTED_BY]->(d:Director) RETURN d.name, COUNT(s) ORDER BY COUNT(s) DESC LIMIT 5;" "top_directors"
 
           echo "}" >> $OUTPUT_FILE  # Закрытие JSON объекта
+          
 
       - name: Debug Neo4j output file
         run: |
