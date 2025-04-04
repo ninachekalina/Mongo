@@ -20,7 +20,8 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y openjdk-17-jdk ssh unzip wget jq
+          sudo apt-get install -y openjdk-17-jdk ssh unzip wget jq python3-pip
+          pip install kaggle
 
       - name: Download and extract Hadoop
         run: |
@@ -28,7 +29,7 @@ jobs:
           tar -xzf hadoop-3.3.6.tar.gz -C /opt/
           mv /opt/hadoop-3.3.6 /opt/hadoop
           echo "HADOOP_HOME=/opt/hadoop" >> $GITHUB_ENV
-          echo "PATH=$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH" >> $GITHUB_ENV
+          echo "PATH=/opt/hadoop/bin:/opt/hadoop/sbin:$PATH" >> $GITHUB_ENV
 
       - name: Configure SSH for Hadoop
         run: |
@@ -48,6 +49,7 @@ jobs:
             </property>
           </configuration>
           EOF
+
           cat <<EOF > /opt/hadoop/etc/hadoop/hdfs-site.xml
           <configuration>
             <property>
@@ -58,36 +60,35 @@ jobs:
           EOF
 
       - name: Format NameNode
-        run: /opt/hadoop/bin/hdfs namenode -format
+        run: hdfs namenode -format
 
       - name: Start Hadoop
         run: |
-          /opt/hadoop/sbin/start-dfs.sh
+          start-dfs.sh
           sleep 5
           jps
 
       - name: Create HDFS directories
         run: |
-          /opt/hadoop/bin/hdfs dfs -mkdir -p /user/runner
-          /opt/hadoop/bin/hdfs dfs -mkdir -p /data
-          /opt/hadoop/bin/hdfs dfs -chmod 777 /data
-          /opt/hadoop/bin/hdfs dfs -mkdir -p /data/backup/
-          /opt/hadoop/bin/hdfs dfs -mkdir -p /data/moved/
+          hdfs dfs -mkdir -p /user/runner
+          hdfs dfs -mkdir -p /data
+          hdfs dfs -chmod 777 /data
+          hdfs dfs -mkdir -p /data/backup/
+          hdfs dfs -mkdir -p /data/moved/
 
       - name: Download Russian Demography dataset from Kaggle
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
-          pip install kaggle
           mkdir -p data
           kaggle datasets download -d chekalinanina/russian-demography -p data --unzip
           ls -lah data/
 
       - name: Upload dataset to HDFS
         run: |
-          /opt/hadoop/bin/hdfs dfs -put data/* /data/
-          /opt/hadoop/bin/hdfs dfs -ls /data/
+          hdfs dfs -put data/* /data/
+          hdfs dfs -ls /data/
 
       - name: Save HDFS results to JSON
         run: |
