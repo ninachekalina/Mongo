@@ -92,29 +92,30 @@ jobs:
       - name: Save HDFS results to JSON
         run: |
           OUTPUT_FILE="/tmp/hdfs_output.json"
-          echo "{" > $OUTPUT_FILE  # Начало JSON объекта
-          FIRST=true
+          echo "{" > $OUTPUT_FILE
 
-          function add_entry {
-            NAME=$1
-            CMD=$2
-            RESULT=$($CMD | jq -R . | paste -sd "," -)
-            if [ -n "$RESULT" ]; then
-              if [ "$FIRST" = true ]; then
-                FIRST=false
-              else
-                echo "," >> $OUTPUT_FILE
-              fi
-              echo "\"$NAME\": [$RESULT]" >> $OUTPUT_FILE
-            fi
-          }
+          echo '"size":' >> $OUTPUT_FILE
+          hdfs dfs -du -h /data | jq -R -s -c 'split("\n")[:-1]' >> $OUTPUT_FILE
+          echo "," >> $OUTPUT_FILE
 
-          add_entry "size" "hdfs dfs -du -h /data"
-          add_entry "head" "hdfs dfs -cat /data/russian_demography.csv | head -n 5"
-          add_entry "move" "hdfs dfs -ls /data/moved"
-          add_entry "grep" "hdfs dfs -cat /data/russian_demography.csv | grep -m 1 year"
-          add_entry "replication" "hdfs getconf -confKey dfs.replication"
-          add_entry "delete" "hdfs dfs -rm -r -skipTrash /data/backup && hdfs dfs -ls /data"
+          echo '"head":' >> $OUTPUT_FILE
+          hdfs dfs -cat /data/russian_demography.csv | head -n 5 | jq -R -s -c 'split("\n")[:-1]' >> $OUTPUT_FILE
+          echo "," >> $OUTPUT_FILE
+
+          echo '"move":' >> $OUTPUT_FILE
+          hdfs dfs -ls /data/moved | jq -R -s -c 'split("\n")[:-1]' >> $OUTPUT_FILE
+          echo "," >> $OUTPUT_FILE
+
+          echo '"grep":' >> $OUTPUT_FILE
+          hdfs dfs -cat /data/russian_demography.csv | grep -m 1 year | jq -R -c '.' >> $OUTPUT_FILE
+          echo "," >> $OUTPUT_FILE
+
+          echo '"replication":' >> $OUTPUT_FILE
+          hdfs getconf -confKey dfs.replication | jq -R -c '.' >> $OUTPUT_FILE
+          echo "," >> $OUTPUT_FILE
+
+          echo '"delete":' >> $OUTPUT_FILE
+          (hdfs dfs -rm -r -skipTrash /data/backup && hdfs dfs -ls /data) | jq -R -s -c 'split("\n")[:-1]' >> $OUTPUT_FILE
 
           echo "}" >> $OUTPUT_FILE
 
