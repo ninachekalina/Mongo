@@ -96,7 +96,7 @@ import json
 import subprocess
 
 def run(cmd):
-    return subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True).stdout.strip()
+    return subprocess.run(cmd, shell=True, capture_output=True, text=True).stdout.strip()
 
 data = {
     'size': run('hdfs dfs -du -h /data'),
