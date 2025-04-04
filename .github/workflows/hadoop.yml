@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y openjdk-17-jdk ssh unzip wget
+          sudo apt-get install -y openjdk-17-jdk ssh unzip wget jq
 
       - name: Download and extract Hadoop
         run: |
@@ -89,30 +89,37 @@ jobs:
           /opt/hadoop/bin/hdfs dfs -put data/* /data/
           /opt/hadoop/bin/hdfs dfs -ls /data/
 
-      - name: Сохраняем результат в JSON
+      - name: Save HDFS results to JSON
         run: |
-          python3 -c "
-import json
-import subprocess
+          OUTPUT_FILE="/tmp/hdfs_output.json"
+          echo "{" > $OUTPUT_FILE  # Начало JSON объекта
+          FIRST=true
 
-def run(cmd):
-    return subprocess.run(cmd, shell=True, capture_output=True, text=True).stdout.strip()
+          function add_entry {
+            NAME=$1
+            CMD=$2
+            RESULT=$($CMD | jq -R . | paste -sd "," -)
+            if [ -n "$RESULT" ]; then
+              if [ "$FIRST" = true ]; then
+                FIRST=false
+              else
+                echo "," >> $OUTPUT_FILE
+              fi
+              echo "\"$NAME\": [$RESULT]" >> $OUTPUT_FILE
+            fi
+          }
 
-data = {
-    'size': run('hdfs dfs -du -h /data'),
-    'head': run('hdfs dfs -cat /data/russian_demography.csv | head -n 5'),
-    'move': run('hdfs dfs -ls /data/moved'),
-    'grep': run('hdfs dfs -cat /data/russian_demography.csv | grep -m 1 year'),
-    'replication': run('hdfs getconf -confKey dfs.replication'),
-    'delete': run('hdfs dfs -rm -r -skipTrash /data/backup && hdfs dfs -ls /data')
-}
+          add_entry "size" "hdfs dfs -du -h /data"
+          add_entry "head" "hdfs dfs -cat /data/russian_demography.csv | head -n 5"
+          add_entry "move" "hdfs dfs -ls /data/moved"
+          add_entry "grep" "hdfs dfs -cat /data/russian_demography.csv | grep -m 1 year"
+          add_entry "replication" "hdfs getconf -confKey dfs.replication"
+          add_entry "delete" "hdfs dfs -rm -r -skipTrash /data/backup && hdfs dfs -ls /data"
 
-with open('hdfs_output.json', 'w', encoding='utf-8') as f:
-    json.dump(data, f, ensure_ascii=False, indent=2)
-"
+          echo "}" >> $OUTPUT_FILE
 
       - name: Upload HDFS JSON log as artifact
         uses: actions/upload-artifact@v4
         with:
           name: hadoop-hdfs-logs
-          path: hdfs_output.json
+          path: /tmp/hdfs_output.json
