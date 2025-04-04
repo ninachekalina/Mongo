@@ -91,8 +91,7 @@ jobs:
 
       - name: Run all HDFS operations and save JSON
         run: |
-          mkdir -p output
-          cat <<EOF > output/hdfs_output.json
+          cat <<EOF > hdfs_output.json
           {
             "size": "$( /opt/hadoop/bin/hdfs dfs -du -h /data/ | sed 's/"/\\"/g' )",
             "head": "$( for file in $(/opt/hadoop/bin/hdfs dfs -ls /data/ | awk '{print \$8}'); do /opt/hadoop/bin/hdfs dfs -cat \$file | head -n 5; done | sed 's/"/\\"/g' )",
@@ -102,12 +101,14 @@ jobs:
             "delete": "$( /opt/hadoop/bin/hdfs dfs -rm -r /data/backup/ 2>&1 && /opt/hadoop/bin/hdfs dfs -ls /data/ | sed 's/"/\\"/g' )"
           }
           EOF
-          cat output/hdfs_output.json
+          cat hdfs_output.json
 
       - name: Upload HDFS JSON log as artifact
         uses: actions/upload-artifact@v4
         with:
           name: hadoop-hdfs-logs
-          path: output/hdfs_output.json
+          path: hdfs_output.json
 
+
+     
  
