@@ -89,26 +89,30 @@ jobs:
           /opt/hadoop/bin/hdfs dfs -put data/* /data/
           /opt/hadoop/bin/hdfs dfs -ls /data/
 
-      - name: Run all HDFS operations and save JSON
+      - name: Сохраняем результат в JSON
         run: |
-          cat <<EOF > hdfs_output.json
-          {
-            "size": "$( /opt/hadoop/bin/hdfs dfs -du -h /data/ | sed 's/"/\\"/g' )",
-            "head": "$( for file in $(/opt/hadoop/bin/hdfs dfs -ls /data/ | awk '{print \$8}'); do /opt/hadoop/bin/hdfs dfs -cat \$file | head -n 5; done | sed 's/"/\\"/g' )",
-            "move": "$( /opt/hadoop/bin/hdfs dfs -mv /data/*.csv /data/moved/ 2>&1 && /opt/hadoop/bin/hdfs dfs -ls /data/moved/ | sed 's/"/\\"/g' )",
-            "grep": "$( /opt/hadoop/bin/hdfs dfs -cat /data/moved/*.csv | grep -i "birth" | head -n 10 | sed 's/"/\\"/g' )",
-            "replication": "$( /opt/hadoop/bin/hdfs dfs -stat %r /data/moved/*.csv 2>/dev/null | sed 's/"/\\"/g' )",
-            "delete": "$( /opt/hadoop/bin/hdfs dfs -rm -r /data/backup/ 2>&1 && /opt/hadoop/bin/hdfs dfs -ls /data/ | sed 's/"/\\"/g' )"
-          }
-          EOF
-          cat hdfs_output.json
+          python3 -c "
+import json
+import subprocess
+
+def run(cmd):
+    return subprocess.run(cmd, shell=True, check=True, capture_output=True, text=True).stdout.strip()
+
+data = {
+    'size': run('hdfs dfs -du -h /data'),
+    'head': run('hdfs dfs -cat /data/russian_demography.csv | head -n 5'),
+    'move': run('hdfs dfs -ls /data/moved'),
+    'grep': run('hdfs dfs -cat /data/russian_demography.csv | grep -m 1 year'),
+    'replication': run('hdfs getconf -confKey dfs.replication'),
+    'delete': run('hdfs dfs -rm -r -skipTrash /data/backup && hdfs dfs -ls /data')
+}
+
+with open('hdfs_output.json', 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
+"
 
       - name: Upload HDFS JSON log as artifact
         uses: actions/upload-artifact@v4
         with:
           name: hadoop-hdfs-logs
           path: hdfs_output.json
-
-
-     
- 
