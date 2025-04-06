@@ -41,7 +41,11 @@ jobs:
       - name: Check Spark version
         run: spark-submit --version
 
-      - name: Download dataset from Kaggle
+      - name: Install Kaggle CLI
+        run: |
+          pip install kaggle
+
+      - name: Download Netflix dataset from Kaggle
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
@@ -56,7 +60,7 @@ jobs:
       - name: Upload dataset to Spark
         run: |
           SPARK_DIR="/opt/spark"
-          spark-submit --class org.apache.spark.examples.SparkPi --master local[*] $SPARK_DIR/examples/jars/spark-examples_2.12-${{ matrix.spark }}.jar 1000
+          spark-submit --class org.apache.spark.examples.SparkPi --master local[*] $SPARK_DIR/examples/jars/spark-examples_2.12-3.5.3.jar 1000
 
       - name: Run Spark operations
         run: |
@@ -91,5 +95,3 @@ jobs:
         with:
           name: spark-output
           path: /tmp/spark_output.json
-
-    
