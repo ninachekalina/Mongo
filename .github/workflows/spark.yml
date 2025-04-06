@@ -8,13 +8,13 @@ on:
       - '.github/workflows/spark.yml'
   pull_request:
     branches:
-      - 'main'
+      - main
     paths:
       - '.github/workflows/spark.yml'
   workflow_dispatch:
     inputs:
       query_key:
-        description: 'key to extract query from artifact'
+        description: 'Key to extract query from artifact'
         required: false
 
 jobs:
@@ -61,36 +61,117 @@ jobs:
       - name: Check downloaded files
         run: ls -lah data/
 
-      - name: Run Spark operations with PySpark
+      - name: Run query for unique genres
         run: |
-          # Пример операции с PySpark
           echo "from pyspark.sql import SparkSession" > /tmp/spark_query.py
           echo "spark = SparkSession.builder.appName('Netflix').getOrCreate()" >> /tmp/spark_query.py
-          echo "df = spark.read.csv('data/netflix_titles.csv', header=True, inferSchema=True)" >> /tmp/spark_query.py
-          echo "df.show()" >> /tmp/spark_query.py
+          echo "df = spark.read.csv('/data/netflix_titles.csv', header=True, inferSchema=True)" >> /tmp/spark_query.py
+          echo "df.select('listed_in').distinct().show()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
-      - name: Save Spark results to JSON
+      - name: Run query for movies after 2015
         run: |
-          OUTPUT_FILE="/tmp/spark_output.json"
-          echo "{" > $OUTPUT_FILE
+          echo "df.filter(df['release_year'] > 2015).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
 
-          echo '"top_titles":' >> $OUTPUT_FILE
-          spark-submit /tmp/spark_query.py | jq -R -s -c 'split("\n")[:-1]' >> $OUTPUT_FILE
-          echo "," >> $OUTPUT_FILE
+      - name: Run query for top 10 longest movies
+        run: |
+          echo "df.orderBy(df['duration'], ascending=False).limit(10).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
 
-          echo '"average_duration":' >> $OUTPUT_FILE
-          spark-submit /tmp/spark_query.py | jq -R -s -c 'split("\n")[:-1]' >> $OUTPUT_FILE
-          echo "," >> $OUTPUT_FILE
+      - name: Run query for movie count by type
+        run: |
+          echo "df.groupBy('type').count().show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
 
-          echo '"release_year_count":' >> $OUTPUT_FILE
-          spark-submit /tmp/spark_query.py | jq -R -s -c 'split("\n")[:-1]' >> $OUTPUT_FILE
-          echo "," >> $OUTPUT_FILE
+      - name: Run query for movie count by release year
+        run: |
+          echo "df.groupBy('release_year').count().show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
 
-          echo "}" >> $OUTPUT_FILE
+      - name: Run query for top 5 longest movies
+        run: |
+          echo "df.orderBy(df['duration'], ascending=False).limit(5).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for movies with rating "TV-MA"
+        run: |
+          echo "df.filter(df['rating'] == 'TV-MA').show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for movies with rating "PG-13"
+        run: |
+          echo "df.filter(df['rating'].isin('PG', 'PG-13')).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for movies with unknown actors
+        run: |
+          echo "df.filter(df['cast'].isNull()).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for top 10 longest titles
+        run: |
+          echo "df.orderBy(df['title'].length(), ascending=False).limit(10).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for average movie duration by genre
+        run: |
+          echo "df.groupBy('listed_in').agg({'duration': 'avg'}).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for most frequent movie genres
+        run: |
+          echo "df.groupBy('listed_in').count().orderBy('count', ascending=False).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for movies with description
+        run: |
+          echo "df.filter(df['description'].isNotNull()).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for average duration by country
+        run: |
+          echo "df.groupBy('country').agg({'duration': 'avg'}).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for movies released in 2020
+        run: |
+          echo "df.filter(df['release_year'] == 2020).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for movies released in the last 5 years
+        run: |
+          echo "df.filter(df['release_year'] > 2017).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for top rated movies
+        run: |
+          echo "df.filter(df['rating'] == 'PG').orderBy(df['duration'], ascending=False).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for movies longer than 90 minutes
+        run: |
+          echo "df.filter(df['duration'] > 90).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for most common release years
+        run: |
+          echo "df.groupBy('release_year').count().orderBy('count', ascending=False).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for movies with multiple genres
+        run: |
+          echo "df.filter(df['listed_in'].contains(',')).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Run query for movies with a specific keyword in the description
+        run: |
+          echo "df.filter(df['description'].contains('love')).show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
 
       - name: Upload Spark results as JSON
         uses: actions/upload-artifact@v4
         with:
           name: spark-output
           path: /tmp/spark_output.json
+
