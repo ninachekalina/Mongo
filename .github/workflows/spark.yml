@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       spark:
-        image: bitnami/spark:latest
+        image: bitnami/spark:latest  # Используем образ Spark от Bitnami
         ports:
           - 8080:8080
         env:
@@ -46,7 +46,7 @@ jobs:
       - name: Wait for Spark to be ready
         run: |
           echo "Waiting for Spark service..."
-          sleep 5
+          sleep 10
           for i in {1..30}; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080)
             if [[ "$STATUS" == "200" ]]; then
@@ -61,6 +61,16 @@ jobs:
 
       - name: Debug Spark Logs
         run: docker logs $(docker ps -q --filter "ancestor=bitnami/spark:latest")
+
+      - name: Download Netflix dataset from Kaggle
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          pip install kaggle
+          mkdir -p data
+          kaggle datasets download -d chekalinanina/netflix-titles -p data --unzip
+          ls -lah data/  # Проверка наличия скачанного файла
 
       - name: Run Spark job
         run: |
