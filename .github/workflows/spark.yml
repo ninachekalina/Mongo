@@ -65,7 +65,7 @@ jobs:
         run: |
           echo "from pyspark.sql import SparkSession" > /tmp/spark_query.py
           echo "spark = SparkSession.builder.appName('Netflix').getOrCreate()" >> /tmp/spark_query.py
-          echo "df = spark.read.csv('/data/netflix_titles.csv', header=True, inferSchema=True)" >> /tmp/spark_query.py
+          echo "df = spark.read.csv('/home/runner/work/Mongo/Mongo/data/netflix_titles.csv', header=True, inferSchema=True)" >> /tmp/spark_query.py
           echo "df.select('listed_in').distinct().show()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
