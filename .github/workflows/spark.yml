@@ -3,10 +3,10 @@ name: Spark CI
 on:
   push:
     branches:
-      - main
+      - 'master'
   pull_request:
     branches:
-      - main
+      - 'main'
   workflow_dispatch:
     inputs:
       query_key:
@@ -14,11 +14,21 @@ on:
         required: false
 
 jobs:
-  test-spark:
+  spark-submit:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python:
+          - '3.10'
+          - '3.11'
+        spark:
+          - 3.3.2
+          - 3.4.0
+
     services:
       spark:
-        image: bitnami/spark:latest
+        image: bitnami/spark:${{ matrix.spark }}
         ports:
           - 4040:4040  # Spark UI порт
           - 7077:7077  # Spark master порт
@@ -37,7 +47,18 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
       - name: Install dependencies
         run: |
@@ -47,9 +68,9 @@ jobs:
 
       - name: Download and Extract Spark
         run: |
-          wget -q https://dlcdn.apache.org/spark/spark-3.4.0/spark-3.4.0-bin-hadoop3.tgz
-          tar -xzf spark-3.4.0-bin-hadoop3.tgz -C /opt/
-          mv /opt/spark-3.4.0-bin-hadoop3 /opt/spark
+          wget -q https://dlcdn.apache.org/spark/spark-${{ matrix.spark }}/spark-${{ matrix.spark }}-bin-hadoop3.tgz
+          tar -xzf spark-${{ matrix.spark }}-bin-hadoop3.tgz -C /opt/
+          mv /opt/spark-${{ matrix.spark }}-bin-hadoop3 /opt/spark
           echo "SPARK_HOME=/opt/spark" >> $GITHUB_ENV
           echo "PATH=$SPARK_HOME/bin:$PATH" >> $GITHUB_ENV
 
@@ -77,7 +98,7 @@ jobs:
       - name: Upload dataset to Spark
         run: |
           SPARK_DIR="/opt/spark"
-          spark-submit --class org.apache.spark.examples.SparkPi --master $SPARK_MASTER $SPARK_DIR/examples/jars/spark-examples_2.12-3.4.0.jar 1000
+          spark-submit --class org.apache.spark.examples.SparkPi --master $SPARK_MASTER $SPARK_DIR/examples/jars/spark-examples_2.12-${{ matrix.spark }}.jar 1000
 
       - name: Run Spark operations
         run: |
