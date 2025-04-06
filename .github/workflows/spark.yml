@@ -109,10 +109,12 @@ jobs:
           echo "df.filter(df['cast'].isNull()).show()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
-      - name: Run query for top 10 longest titles
+      - name: Run Spark operation to find top 10 longest titles
         run: |
-          echo "df.orderBy(df['title'].length(), ascending=False).limit(10).show()" >> /tmp/spark_query.py
+          echo "from pyspark.sql.functions import length" >> /tmp/spark_query.py
+          echo "df.orderBy(length(df['title']).desc()).limit(10).show()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
+
 
       - name: Run query for average movie duration by genre
         run: |
