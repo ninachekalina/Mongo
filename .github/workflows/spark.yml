@@ -4,15 +4,9 @@ on:
   push:
     branches:
       - main
-    paths:
-      - '.github/workflows/spark.yml'
-      - 'test_queries_spark.py'
   pull_request:
     branches:
       - main
-    paths:
-      - '.github/workflows/spark.yml'
-      - 'test_queries_spark.py'
   workflow_dispatch:
     inputs:
       query_key:
@@ -24,60 +18,99 @@ jobs:
     runs-on: ubuntu-latest
     services:
       spark:
-        image: bitnami/spark:latest  # Используем образ Spark от Bitnami
+        image: bitnami/spark:latest
         ports:
-          - 8080:8080
-        env:
-          SPARK_MODE: master
+          - 4040:4040  # Spark UI порт
+          - 7077:7077  # Spark master порт
         options: >-
-          --health-cmd "curl -f http://localhost:8080"
-          --health-interval 10s
-          --health-timeout 5s
+          --health-cmd "curl --silent --fail localhost:4040"
+          --health-interval 20s
+          --health-timeout 10s
           --health-retries 10
+          --env SPARK_MODE=master
+          --env SPARK_WORKER_MEMORY=2g
+          --env SPARK_DRIVER_MEMORY=2g
+          --env SPARK_EXECUTOR_MEMORY=2g
+          --env SPARK_DRIVER_CORES=1
+          --env SPARK_EXECUTOR_CORES=1
+          --env SPARK_MASTER=local[*]
+        mem_limit: 2g
+        cpus: 1
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install jq and pip
+      - name: Install dependencies
         run: |
-          sudo apt-get install -y jq
-          sudo apt-get install -y python3-pip
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jdk wget jq python3-pip
+          pip install pyspark kaggle
 
-      - name: Wait for Spark to be ready
+      - name: Download and Extract Spark
         run: |
-          echo "Waiting for Spark service..."
-          sleep 10
-          for i in {1..30}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080)
-            if [[ "$STATUS" == "200" ]]; then
-              echo "Spark is ready!"
-              exit 0
-            fi
-            echo "Waiting for Spark to start ($i/30)..."
-            sleep 5
-          done
-          echo "Spark did not start in time."
-          exit 1
+          wget -q https://dlcdn.apache.org/spark/spark-3.4.0/spark-3.4.0-bin-hadoop3.tgz
+          tar -xzf spark-3.4.0-bin-hadoop3.tgz -C /opt/
+          mv /opt/spark-3.4.0-bin-hadoop3 /opt/spark
+          echo "SPARK_HOME=/opt/spark" >> $GITHUB_ENV
+          echo "PATH=$SPARK_HOME/bin:$PATH" >> $GITHUB_ENV
 
-      - name: Debug Spark Logs
-        run: docker logs $(docker ps -q --filter "ancestor=bitnami/spark:latest")
+      - name: Set environment variables
+        run: |
+          echo "export SPARK_MASTER=local[*]" >> $GITHUB_ENV
+          echo "export PYSPARK_PYTHON=python3" >> $GITHUB_ENV
 
-      - name: Download Netflix dataset from Kaggle
+      - name: Check Spark version
+        run: |
+          spark-submit --version
+
+      - name: Download dataset from Kaggle
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
         run: |
-          pip install kaggle
           mkdir -p data
           kaggle datasets download -d chekalinanina/netflix-titles -p data --unzip
-          ls -lah data/  # Проверка наличия скачанного файла
+          ls -lah data/
 
-      - name: Run Spark job
+      - name: Check downloaded files
+        run: ls -lah data/
+
+      - name: Upload dataset to Spark
         run: |
-          docker exec -it $(docker ps -q --filter "ancestor=bitnami/spark:latest") spark-submit --master spark://spark:7077 test_queries_spark.py
+          SPARK_DIR="/opt/spark"
+          spark-submit --class org.apache.spark.examples.SparkPi --master $SPARK_MASTER $SPARK_DIR/examples/jars/spark-examples_2.12-3.4.0.jar 1000
 
-      - name: Upload Spark results
+      - name: Run Spark operations
+        run: |
+          # Пример операции с PySpark
+          echo "from pyspark.sql import SparkSession" > /tmp/spark_query.py
+          echo "spark = SparkSession.builder.appName('Netflix').getOrCreate()" >> /tmp/spark_query.py
+          echo "df = spark.read.csv('/data/netflix_titles.csv', header=True, inferSchema=True)" >> /tmp/spark_query.py
+          echo "df.show()" >> /tmp/spark_query.py
+          spark-submit /tmp/spark_query.py
+
+      - name: Save Spark results to JSON
+        run: |
+          OUTPUT_FILE="/tmp/spark_output.json"
+          echo "{" > $OUTPUT_FILE
+
+          echo '"top_titles":' >> $OUTPUT_FILE
+          spark-submit /tmp/spark_query.py | jq -R -s -c 'split("\n")[:-1]' >> $OUTPUT_FILE
+          echo "," >> $OUTPUT_FILE
+
+          echo '"average_duration":' >> $OUTPUT_FILE
+          spark-submit /tmp/spark_query.py | jq -R -s -c 'split("\n")[:-1]' >> $OUTPUT_FILE
+          echo "," >> $OUTPUT_FILE
+
+          echo '"release_year_count":' >> $OUTPUT_FILE
+          spark-submit /tmp/spark_query.py | jq -R -s -c 'split("\n")[:-1]' >> $OUTPUT_FILE
+          echo "," >> $OUTPUT_FILE
+
+          echo "}" >> $OUTPUT_FILE
+
+      - name: Upload Spark results as JSON
         uses: actions/upload-artifact@v4
         with:
           name: spark-output
-          path: output/results.json  # Укажите путь к вашему выходному файлу
+          path: /tmp/spark_output.json
