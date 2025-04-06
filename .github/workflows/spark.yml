@@ -76,146 +76,146 @@ jobs:
       # Query 2: Movies after 2015
       - name: Run query for movies after 2015
         run: |
-          echo "df.filter(df['release_year'] > 2015).show()" >> /tmp/spark_query.py
+          echo "df.filter(df['release_year'] > 2015).collect()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'movies_after_2015': [row.title for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'movies_after_2015': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 3: Top 10 longest movies
       - name: Run query for top 10 longest movies
         run: |
-          echo "df.orderBy(df['duration'], ascending=False).limit(10).show()" >> /tmp/spark_query.py
+          echo "df.orderBy(df['duration'], ascending=False).limit(10).collect()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'top_10_longest_movies': [row.title for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'top_10_longest_movies': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 4: Movie count by type
       - name: Run query for movie count by type
         run: |
-          echo "df.groupBy('type').count().show()" >> /tmp/spark_query.py
+          echo "df.groupBy('type').count().collect()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'movie_count_by_type': [row.type for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'movie_count_by_type': [row['type'] for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 5: Movie count by release year
       - name: Run query for movie count by release year
         run: |
-          echo "df.groupBy('release_year').count().show()" >> /tmp/spark_query.py
+          echo "df.groupBy('release_year').count().collect()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'movie_count_by_year': [row.release_year for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'movie_count_by_year': [row['release_year'] for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 6: Top 5 longest movies
       - name: Run query for top 5 longest movies
         run: |
-          echo "df.orderBy(df['duration'], ascending=False).limit(5).show()" >> /tmp/spark_query.py
+          echo "df.orderBy(df['duration'], ascending=False).limit(5).collect()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'top_5_longest_movies': [row.title for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'top_5_longest_movies': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 7: Movies with rating "TV-MA"
       - name: Run query for movies with rating "TV-MA"
         run: |
-          echo "df.filter(df['rating'] == 'TV-MA').show()" >> /tmp/spark_query.py
+          echo "df.filter(df['rating'] == 'TV-MA').collect()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'tv_ma_movies': [row.title for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'tv_ma_movies': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 8: Movies with rating "PG" or "PG-13"
       - name: Run query for movies with rating "PG" or "PG-13"
         run: |
-          echo "df.filter(df['rating'].isin('PG', 'PG-13')).show()" >> /tmp/spark_query.py
+          echo "df.filter(df['rating'].isin('PG', 'PG-13')).collect()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'pg_pg13_movies': [row.title for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'pg_pg13_movies': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 9: Movies with unknown actors
       - name: Run query for movies with unknown actors
         run: |
-          echo "df.filter(df['cast'].isNull()).show()" >> /tmp/spark_query.py
+          echo "df.filter(df['cast'].isNull()).collect()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'movies_with_unknown_actors': [row.title for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'movies_with_unknown_actors': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 10: Top 10 longest titles
       - name: Run Spark operation to find top 10 longest titles
         run: |
           echo "from pyspark.sql.functions import length" >> /tmp/spark_query.py
-          echo "df.orderBy(length(df['title']).desc()).limit(10).show()" >> /tmp/spark_query.py
+          echo "df.orderBy(length(df['title']).desc()).limit(10).collect()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'top_10_longest_titles': [row.title for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'top_10_longest_titles': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 11: Average movie duration by genre
       - name: Run query for average movie duration by genre
         run: |
-          echo "df.groupBy('listed_in').agg({'duration': 'avg'}).show()" >> /tmp/spark_query.py
+          echo "df.groupBy('listed_in').agg({'duration': 'avg'}).collect()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'avg_duration_by_genre': [row.listed_in for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'avg_duration_by_genre': [row['listed_in'] for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 12: Most frequent movie genres
       - name: Run query for most frequent movie genres
         run: |
-          echo "df.groupBy('listed_in').count().orderBy('count', ascending=False).show()" >> /tmp/spark_query.py
+          echo "df.groupBy('listed_in').count().orderBy('count', ascending=False).collect()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 13: Movies with description
       - name: Run query for movies with description
         run: |
-          echo "df.filter(df['description'].isNotNull()).show()" >> /tmp/spark_query.py
+          echo "df.filter(df['description'].isNotNull()).collect()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 14: Average duration by country
       - name: Run query for average duration by country
         run: |
-          echo "df.groupBy('country').agg({'duration': 'avg'}).show()" >> /tmp/spark_query.py
+          echo "df.groupBy('country').agg({'duration': 'avg'}).collect()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 15: Movies released in 2020
       - name: Run query for movies released in 2020
         run: |
-          echo "df.filter(df['release_year'] == 2020).show()" >> /tmp/spark_query.py
+          echo "df.filter(df['release_year'] == 2020).collect()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 16: Movies released in the last 5 years
       - name: Run query for movies released in the last 5 years
         run: |
-          echo "df.filter(df['release_year'] > 2017).show()" >> /tmp/spark_query.py
+          echo "df.filter(df['release_year'] > 2017).collect()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 17: Top rated movies
       - name: Run query for top rated movies
         run: |
-          echo "df.filter(df['rating'] == 'PG').orderBy(df['duration'], ascending=False).show()" >> /tmp/spark_query.py
+          echo "df.filter(df['rating'] == 'PG').orderBy(df['duration'], ascending=False).collect()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 18: Movies longer than 90 minutes
       - name: Run query for movies longer than 90 minutes
         run: |
-          echo "df.filter(df['duration'] > 90).show()" >> /tmp/spark_query.py
+          echo "df.filter(df['duration'] > 90).collect()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 19: Most common release years
       - name: Run query for most common release years
         run: |
-          echo "df.groupBy('release_year').count().orderBy('count', ascending=False).show()" >> /tmp/spark_query.py
+          echo "df.groupBy('release_year').count().orderBy('count', ascending=False).collect()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 20: Movies with multiple genres
       - name: Run query for movies with multiple genres
         run: |
-          echo "df.filter(df['listed_in'].contains(',')).show()" >> /tmp/spark_query.py
+          echo "df.filter(df['listed_in'].contains(',')).collect()" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Upload the results as an artifact
