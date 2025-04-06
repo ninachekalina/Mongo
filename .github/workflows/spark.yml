@@ -31,9 +31,6 @@ jobs:
           --health-interval 20s
           --health-timeout 10s
           --health-retries 10
-        options: "--health-cmd 'curl --silent --fail localhost:4040' --health-interval 30s --health-timeout 10s --health-retries 10"
-        # Настройка памяти и процессоров, если требуется, следует использовать через Docker контейнер
-        # но GitHub Actions использует отдельные настройки через ресурсы runner'а, а не контейнера напрямую.
 
     steps:
       - name: Checkout repository
@@ -113,3 +110,5 @@ jobs:
       - name: Show Spark container logs (if needed)
         if: failure()
         run: docker logs $(docker ps -aqf "ancestor=bitnami/spark:3.4.0")
+
+
