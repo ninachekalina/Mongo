@@ -1,4 +1,3 @@
-
 name: Spark CI
 
 on:
@@ -25,8 +24,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Install jq
-        run: sudo apt-get install -y jq
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -50,7 +48,7 @@ jobs:
       - name: Install Kaggle CLI
         run: |
           pip install kaggle
-          
+
       - name: Download Netflix dataset from Kaggle
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
@@ -59,21 +57,22 @@ jobs:
           mkdir -p data
           kaggle datasets download -d chekalinanina/netflix-titles -p data --unzip
           ls -lah data/
-          
+
       - name: Check downloaded files
         run: ls -lah data/
 
-      # Save results as JSON with unique keys
-      - name: Save Spark results to JSON
+      # Prepare the output file and write each query result with a unique key
+      - name: Prepare Spark result file
         run: |
           OUTPUT_FILE="/tmp/spark_output.json"
           echo "{" > $OUTPUT_FILE  # Start the JSON object
-          FIRST=true  # Flag for first entry
+          FIRST=true  # Flag for the first entry
 
           function run_query {
             QUERY=$1
             KEY=$2
-            RESULT=$(spark-submit /tmp/spark_query.py | tail -n +2 | jq -R . | paste -sd "," -)  # Gather query results
+            echo "Running query for $KEY..."
+            RESULT=$(spark-submit /tmp/spark_query.py | tail -n +2 | jq -R . | paste -sd "," -)  # Extracting the result
 
             if [ -n "$RESULT" ]; then  # If results are not empty
               if [ "$FIRST" = true ]; then
@@ -81,34 +80,29 @@ jobs:
               else
                 echo "," >> $OUTPUT_FILE  # Add a comma between entries
               fi
-              echo "\"$KEY\": [$RESULT]" >> $OUTPUT_FILE  # Write results with key
+              echo "\"$KEY\": [$RESULT]" >> $OUTPUT_FILE  # Write results with the key
             fi
           }
 
-          # Query for unique genres
+          # Define the queries and their keys
+          echo "from pyspark.sql import SparkSession" > /tmp/spark_query.py
+          echo "spark = SparkSession.builder.appName('Netflix').getOrCreate()" >> /tmp/spark_query.py
+          echo "df = spark.read.csv('/home/runner/work/Mongo/Mongo/data/netflix_titles.csv', header=True, inferSchema=True)" >> /tmp/spark_query.py
+
+          # Example queries with their unique keys
+          echo "df.select('listed_in').distinct().show()" >> /tmp/spark_query.py
           run_query "df.select('listed_in').distinct().collect()" "unique_genres"
-          # Query for movies after 2015
+
+          echo "df.filter(df['release_year'] > 2015).show()" >> /tmp/spark_query.py
           run_query "df.filter(df['release_year'] > 2015).collect()" "movies_after_2015"
-          # Query for top 10 longest movies
+
+          echo "df.orderBy(df['duration'], ascending=False).limit(10).show()" >> /tmp/spark_query.py
           run_query "df.orderBy(df['duration'], ascending=False).limit(10).collect()" "top_10_longest_movies"
-          # Query for movie count by type
+
+          echo "df.groupBy('type').count().show()" >> /tmp/spark_query.py
           run_query "df.groupBy('type').count().collect()" "movie_count_by_type"
-          # Query for movie count by release year
-          run_query "df.groupBy('release_year').count().collect()" "movie_count_by_year"
-          # Query for top 5 longest movies
-          run_query "df.orderBy(df['duration'], ascending=False).limit(5).collect()" "top_5_longest_movies"
-          # Query for movies with rating "TV-MA"
-          run_query "df.filter(df['rating'] == 'TV-MA').collect()" "tv_ma_movies"
-          # Query for movies with rating "PG" or "PG-13"
-          run_query "df.filter(df['rating'].isin('PG', 'PG-13')).collect()" "pg_pg13_movies"
-          # Query for movies with unknown actors
-          run_query "df.filter(df['cast'].isNull()).collect()" "movies_with_unknown_actors"
-          # Query for top 10 longest titles
-          run_query "df.orderBy(length(df['title']).desc()).limit(10).collect()" "top_10_longest_titles"
-          # Query for average movie duration by genre
-          run_query "df.groupBy('listed_in').agg({'duration': 'avg'}).collect()" "avg_duration_by_genre"
-          # Query for most frequent movie genres
-          run_query "df.groupBy('listed_in').count().orderBy('count', ascending=False).collect()" "most_frequent_genres"
+
+          # Add more queries here with unique keys...
 
           echo "}" >> $OUTPUT_FILE  # Close the JSON object
 
@@ -118,13 +112,3 @@ jobs:
         with:
           name: spark-output
           path: /tmp/spark_output.json
-
-      
-         
-        
-         
-          
-       
-       
-
-   
