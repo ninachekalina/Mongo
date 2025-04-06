@@ -61,12 +61,7 @@ jobs:
       - name: Check downloaded files
         run: ls -lah data/
 
-      - name: Upload dataset to Spark
-        run: |
-          SPARK_DIR="/opt/spark"
-          spark-submit --class org.apache.spark.examples.SparkPi --master local[*] $SPARK_DIR/examples/jars/spark-examples_2.12-3.5.3.jar 1000
-
-      - name: Run Spark operations
+      - name: Run Spark operations with PySpark
         run: |
           # Пример операции с PySpark
           echo "from pyspark.sql import SparkSession" > /tmp/spark_query.py
