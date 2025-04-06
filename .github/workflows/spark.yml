@@ -66,7 +66,7 @@ jobs:
         run: |
           echo "from pyspark.sql import SparkSession" > /tmp/spark_query.py
           echo "spark = SparkSession.builder.appName('Netflix').getOrCreate()" >> /tmp/spark_query.py
-          echo "df = spark.read.csv('data/netflix_titles.csv', header=True, inferSchema=True)" >> /tmp/spark_query.py
+          echo "df = spark.read.csv('/home/runner/work/Mongo/Mongo/data/netflix_titles.csv', header=True, inferSchema=True)" >> /tmp/spark_query.py
           echo "result = df.select('listed_in').distinct().collect()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
