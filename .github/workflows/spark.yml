@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/spark.yml'  # Указываем путь к файлу
+      - '.github/workflows/spark.yml'
   pull_request:
     branches:
       - main
     paths:
-      - '.github/workflows/spark.yml'  # Указываем путь к файлу
+      - '.github/workflows/spark.yml'
   workflow_dispatch:
     inputs:
       query_key:
@@ -26,15 +26,14 @@ jobs:
         ports:
           - 4040:4040
           - 7077:7077
-        environment:
-          - SPARK_MODE=master
         options: >-
-          --health-cmd "nc -z localhost 7077"
-          --health-interval 30s
+          --health-cmd "curl --silent --fail localhost:4040"
+          --health-interval 20s
           --health-timeout 10s
           --health-retries 10
-        mem_limit: 2g
-        cpus: 1
+        options: "--health-cmd 'curl --silent --fail localhost:4040' --health-interval 30s --health-timeout 10s --health-retries 10"
+        # Настройка памяти и процессоров, если требуется, следует использовать через Docker контейнер
+        # но GitHub Actions использует отдельные настройки через ресурсы runner'а, а не контейнера напрямую.
 
     steps:
       - name: Checkout repository
