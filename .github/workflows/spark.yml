@@ -79,7 +79,7 @@ jobs:
           echo "df.filter(df['release_year'] > 2015).show()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'movies_after_2015': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'movies_after_2015': [row.title for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 3: Top 10 longest movies
@@ -88,7 +88,7 @@ jobs:
           echo "df.orderBy(df['duration'], ascending=False).limit(10).show()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'top_10_longest_movies': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'top_10_longest_movies': [row.title for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 4: Movie count by type
@@ -97,7 +97,7 @@ jobs:
           echo "df.groupBy('type').count().show()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'movie_count_by_type': [row['type'] for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'movie_count_by_type': [row.type for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 5: Movie count by release year
@@ -106,7 +106,7 @@ jobs:
           echo "df.groupBy('release_year').count().show()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'movie_count_by_year': [row['release_year'] for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'movie_count_by_year': [row.release_year for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 6: Top 5 longest movies
@@ -115,7 +115,7 @@ jobs:
           echo "df.orderBy(df['duration'], ascending=False).limit(5).show()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'top_5_longest_movies': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'top_5_longest_movies': [row.title for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 7: Movies with rating "TV-MA"
@@ -124,7 +124,7 @@ jobs:
           echo "df.filter(df['rating'] == 'TV-MA').show()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'tv_ma_movies': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'tv_ma_movies': [row.title for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 8: Movies with rating "PG" or "PG-13"
@@ -133,7 +133,7 @@ jobs:
           echo "df.filter(df['rating'].isin('PG', 'PG-13')).show()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'pg_pg13_movies': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'pg_pg13_movies': [row.title for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 9: Movies with unknown actors
@@ -142,7 +142,7 @@ jobs:
           echo "df.filter(df['cast'].isNull()).show()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'movies_with_unknown_actors': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'movies_with_unknown_actors': [row.title for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 10: Top 10 longest titles
@@ -152,7 +152,7 @@ jobs:
           echo "df.orderBy(length(df['title']).desc()).limit(10).show()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'top_10_longest_titles': [row['title'] for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'top_10_longest_titles': [row.title for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 11: Average movie duration by genre
@@ -161,7 +161,7 @@ jobs:
           echo "df.groupBy('listed_in').agg({'duration': 'avg'}).show()" >> /tmp/spark_query.py
           echo "import json" >> /tmp/spark_query.py
           echo "with open('/tmp/spark_output.json', 'w') as f:" >> /tmp/spark_query.py
-          echo "    json.dump({'avg_duration_by_genre': [row['listed_in'] for row in result]}, f)" >> /tmp/spark_query.py
+          echo "    json.dump({'avg_duration_by_genre': [row.listed_in for row in result]}, f)" >> /tmp/spark_query.py
           spark-submit /tmp/spark_query.py
 
       # Query 12: Most frequent movie genres
