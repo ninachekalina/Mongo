@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - '.github/workflows/mongo.yml'
-      - 'test_queries.js'  # Если изменяется файл с Mongo-запросами
+      - 'test_queries.js'  # когда изменяется файл с Mongo-запросами
   pull_request:
     branches:
       - main
